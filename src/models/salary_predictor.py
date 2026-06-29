@@ -13,6 +13,22 @@ from pathlib import Path  # Manejo de rutas de archivos multiplataforma
 import joblib  # Serialización de objetos Python (modelos ML)
 import pandas as pd  # Manejo de DataFrames
 import numpy as np  # Operaciones numéricas matriciales
+from typing import Dict, Optional  # Type hints
+
+from config import Config  # Configuración centralizada
+from src.utils.loggers import get_logger  # Logger configurado
+from src.utils.security import save_hash, verify_hash  # Hash SHA-256 para integridad
+
+logger = get_logger("salary_predictor")  # Logger para este módulo
+
+
+def _split_skills(text: str) -> list:
+    """Divide el texto de skills por coma para TF-IDF tokenizer.
+
+    Esta función está a nivel de módulo (no como método) para que
+    pickle pueda serializarla correctamente al guardar el vectorizador.
+    """
+    return text.split(", ")  # "Python, Java" → ["Python", "Java"]
 from typing import Dict, Any, Tuple, Optional, List  # Type hints para tipado
 from sklearn.ensemble import RandomForestRegressor  # Modelo de regresión Random Forest
 from sklearn.model_selection import train_test_split, cross_val_score  # División train/test y validación cruzada
@@ -49,7 +65,7 @@ class SalaryPredictor(ModelInterface):
     @staticmethod
     def _split_skills(text: str) -> list:
         """Divide el texto de skills por coma para TF-IDF tokenizer."""
-        return text.split(", ")  # "Python, Java" → ["Python", "Java"]
+        return _split_skills(text)  # Delega a la función de módulo (pickle-safe)
 
     def __init__(self, model_type: str = "RandomForest", params: Optional[Dict] = None):
         """Inicializa el predictor con el tipo de modelo y parámetros.
@@ -146,7 +162,7 @@ class SalaryPredictor(ModelInterface):
         if self.vectorizer is None:  # Si el vectorizador no existe aún
             self.vectorizer = TfidfVectorizer(
                 max_features=80,  # Máximo 80 features (skills más frecuentes)
-                tokenizer=self._split_skills,  # Tokeniza por coma+espacio
+                tokenizer=_split_skills,  # Tokeniza por coma+espacio (función de módulo, pickle-safe)
                 token_pattern=None,  # Desactiva patrón por defecto (usa tokenizer custom)
                 sublinear_tf=True,  # Aplica log(1 + tf) para suavizar frecuencias
                 min_df=1,  # Aparece en al menos 1 documento

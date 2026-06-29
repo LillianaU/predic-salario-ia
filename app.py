@@ -1,35 +1,46 @@
+# =============================================================================
+# ARCHIVO PRINCIPAL DE LA APLICACIÓN STREAMLIT - PREDICSALARIO IA
+# Propósito: Punto de entrada de la aplicación web para predicción salarial
+#           del sector TI en Medellín y Área Metropolitana usando Machine Learning.
+# Autor: Lilliana Uribe González
+# Fecha: Junio 2026
+# =============================================================================
+
 import sys  # Manipulación del sistema (paths)
 import os  # Variables de entorno del SO
 from pathlib import Path  # Manejo de rutas multiplataforma
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # Agrega directorio raíz al path de Python
+# Permite que los imports desde /src funcionen correctamente al ejecutar streamlit run app.py
 
 from dotenv import load_dotenv  # Carga variables del archivo .env
 load_dotenv(Path(__file__).resolve().parent / ".env")  # Carga .env del directorio raíz
+# Lee API keys, rutas y configuración sensible desde el archivo .env (no versionado)
 
-import streamlit as st  # Framework web para apps de datos
+import streamlit as st  # Framework web para apps de datos (renderizado reactivo)
 import pandas as pd  # Manejo de DataFrames
-import datetime  # Manejo de fechas y horas
-from config import Config  # Configuración centralizada (Singleton)
-from src.data.data_cleaner import DataCleaner  # Pipeline ETL de limpieza
-from src.data.data_repository import DataRepository  # Repositorio de datos (raw/processed)
-from src.utils.loggers import get_logger  # Logger configurado
-from src.utils.validators import SKILL_KEYWORDS, identify_role_category, identify_cargo_level, identify_modalidad  # Funciones de validación
-from src.data.sena_catalog import (  # Catálogo SENA de ocupaciones
+import datetime  # Manejo de fechas y horas para timestamps y filtros
+from config import Config  # Configuración centralizada (Singleton) - rutas, parámetros de modelo, queries
+from src.data.data_cleaner import DataCleaner  # Pipeline ETL de limpieza de datos (salarios, skills, dedup)
+from src.data.data_repository import DataRepository  # Repositorio de datos (raw/processed) - persistencia CSV
+from src.utils.loggers import get_logger  # Logger configurado (formato JSON/CSV según ambiente)
+from src.utils.validators import SKILL_KEYWORDS, identify_role_category, identify_cargo_level, identify_modalidad  # Funciones de validación y clasificación
+from src.data.sena_catalog import (  # Catálogo SENA de ocupaciones - CNO y clasificaciones
     SENA_OCCUPATIONS, get_categories, get_occupations_by_category,  # Ocupaciones y categorías SENA
-    match_uploaded_data_to_sena, get_recommended_occupations,  # Matching y recomendaciones
+    match_uploaded_data_to_sena, get_recommended_occupations,  # Matching y recomendaciones inteligentes
 )
 
 st.set_page_config(
     page_title="PredicSalario IA - Medellín",
-    page_icon="💰",
-    layout="wide",
-    initial_sidebar_state="collapsed",
+    page_icon="💰",  # Icono de dinero en la pestaña del navegador
+    layout="wide",  # Layout ancho para aprovechar toda la pantalla
+    initial_sidebar_state="collapsed",  # Sidebar colapsada al cargar
 )
 
 try:
-    _cfg = Config()
-    logger = get_logger("app", _cfg.LOG_FILE)
+    _cfg = Config()  # Instancia Singleton de configuración (lee .env, rutas, parámetros)
+    logger = get_logger("app", _cfg.LOG_FILE)  # Logger específico para este módulo
 except Exception:
+    # Si la configuración falla (ej: .env ausente), usa logger por defecto sin archivo
     logger = get_logger("app")
 
 DARK_COLORS = {
@@ -60,6 +71,8 @@ MEDELLIN_METRO = {
 
 
 def render_theme_css():
+    # Genera y aplica CSS personalizado para el tema oscuro de la aplicación
+    # Incluye: glassmorphism, animaciones, burbujas flotantes, responsive media queries
     c = DARK_COLORS
     accent = "#4A90E2"
     accent2 = "#2557CC"
@@ -198,7 +211,8 @@ def render_theme_css():
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("""  # Inyecta HTML de burbujas animadas de fondo
+# Inyecta HTML de burbujas animadas de fondo
+st.markdown("""
 <div class="bubbles">
     <div class="bubble"></div>  <!-- Burbuja 1 -->
     <div class="bubble"></div>  <!-- Burbuja 2 -->
@@ -217,30 +231,38 @@ st.markdown("""  # Inyecta HTML de burbujas animadas de fondo
 
 
 MEDELLIN_ALIASES = {  # Diccionario de alias para normalizar nombres de ciudades del AMVA
-    "medellín": "Medellín", "medellin": "Medellín", "medallo": "Medellín",  # Alias de Medellín
-    "bello": "Bello",  # Bello
-    "itagüí": "Itagüí", "itagui": "Itagüí",  # Itagüí
-    "envigado": "Envigado",  # Envigado
-    "sabaneta": "Sabaneta",  # Sabaneta
-    "la estrella": "La Estrella",  # La Estrella
-    "caldas": "Caldas",  # Caldas
-    "copacabana": "Copacabana",  # Copacabana
-    "girardota": "Girardota",  # Girardota
-    "barbosa": "Barbosa",  # Barbosa
-    "donmatías": "Donmatías", "donmatias": "Donmatías",  # Donmatías
-    "santa rosa de osos": "Santa Rosa de Osos",  # Santa Rosa de Osos
-    "san pedro de los milagros": "San Pedro de los Milagros",  # San Pedro de los Milagros
-    "san cristóbal": "San Cristóbal", "san cristobal": "San Cristóbal",  # San Cristóbal
-    "la ceja del tambo": "La Ceja del Tambo", "la ceja": "La Ceja del Tambo",  # La Ceja
-    "carmen de viboral": "Carmen de Viboral",  # Carmen de Viboral
-    "rionegro": "Rionegro",  # Rionegro
-    "marinilla": "Marinilla",  # Marinilla
-    "guatapé": "Guatapé", "guatape": "Guatapé",  # Guatapé
+    # Permite que entradas como "medallo", "medellin", "itagui" se normalicen al nombre canónico
+    "medellín": "Medellín", "medellin": "Medellín", "medallo": "Medellín",
+    "bello": "Bello",
+    "itagüí": "Itagüí", "itagui": "Itagüí",
+    "envigado": "Envigado",
+    "sabaneta": "Sabaneta",
+    "la estrella": "La Estrella",
+    "caldas": "Caldas",
+    "copacabana": "Copacabana",
+    "girardota": "Girardota",
+    "barbosa": "Barbosa",
+    "donmatías": "Donmatías", "donmatias": "Donmatías",
+    "santa rosa de osos": "Santa Rosa de Osos",
+    "san pedro de los milagros": "San Pedro de los Milagros",
+    "san cristóbal": "San Cristóbal", "san cristobal": "San Cristóbal",
+    "la ceja del tambo": "La Ceja del Tambo", "la ceja": "La Ceja del Tambo",
+    "carmen de viboral": "Carmen de Viboral",
+    "rionegro": "Rionegro",
+    "marinilla": "Marinilla",
+    "guatapé": "Guatapé", "guatape": "Guatapé",
 }
 
 
 def extract_ciudad(ubicacion: str) -> str:
-    """Extrae y normaliza el nombre de la ciudad desde una cadena de ubicación."""
+    """Extrae y normaliza el nombre de la ciudad desde una cadena de ubicación.
+
+    Args:
+        ubicacion: Cadena de texto con la ubicación de la oferta laboral.
+
+    Returns:
+        Nombre canónico de la ciudad del AMVA, o 'Medellín' por defecto.
+    """
     if not ubicacion or not isinstance(ubicacion, str):  # Si no hay ubicación o no es string
         return "Medellín"  # Default: Medellín
     u = ubicacion.lower().strip()  # Convierte a minúsculas y quita espacios
@@ -260,7 +282,11 @@ def extract_ciudad(ubicacion: str) -> str:
 
 @st.cache_resource  # Decorador de Streamlit: cachea el resultado (se ejecuta solo una vez)
 def init_components():
-    """Inicializa y cachea todos los componentes del sistema (config, scraper, cleaner, repo, model)."""
+    """Inicializa y cachea todos los componentes del sistema (config, scraper, cleaner, repo, model).
+
+    Returns:
+        Tuple: (cfg, scraper, cleaner, repo, model) - Los 5 componentes principales.
+    """
     from src.models.model_factory import ModelFactory  # Fábrica de modelos ML
     from src.scraper.scraper_factory import ScraperFactory  # Fábrica de scrapers
     cfg = Config()  # Carga configuración centralizada (Singleton)
@@ -272,7 +298,14 @@ def init_components():
 
 
 def _add_derived_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Agrega columnas derivadas: ciudad (desde ubicación) y role_categoria (desde título)."""
+    """Agrega columnas derivadas: ciudad (desde ubicación) y role_categoria (desde título).
+
+    Args:
+        df: DataFrame con datos de ofertas laborales.
+
+    Returns:
+        DataFrame con columnas 'ciudad' y 'role_categoria' agregadas.
+    """
     if "ciudad" not in df.columns:  # Si no existe columna ciudad
         df["ciudad"] = df["ubicacion"].apply(extract_ciudad)  # Extrae ciudad de ubicación
     if "role_categoria" not in df.columns:  # Si no existe columna role_categoria
@@ -282,12 +315,30 @@ def _add_derived_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df  # Retorna DataFrame con columnas derivadas
 
 
-SCRAPE_TIMEOUT = 45  # Timeout del scraping en segundos
+SCRAPE_TIMEOUT = 45  # Timeout del scraping en segundos (espera máxima por request)
 AUTOREFRESH_INTERVAL = 300  # Intervalo de auto-refresh: 300 segundos = 5 minutos
 
 
 def load_or_fetch_data(cfg, scraper, cleaner, repo):
-    """Carga datos desde cache o ejecuta scraping real. Prioriza datos reales."""
+    """Carga datos desde cache o ejecuta scraping real. Prioriza datos reales.
+
+    Flujo:
+    1. Verifica flag de refresh forzado en session_state.
+    2. Si no hay refresh: intenta cargar datos procesados del cache.
+    3. Si no hay procesados: intenta cargar archivos raw y limpiarlos.
+    4. Si no hay nada: ejecuta scraping real con barra de progreso.
+    5. Si scraping falla: hace fallback a cache o archivos raw.
+    6. Si todo falla: retorna DataFrame vacío.
+
+    Args:
+        cfg: Configuración centralizada.
+        scraper: Instancia del scraper (Playwright/HTTP).
+        cleaner: Pipeline ETL de limpieza.
+        repo: Repositorio de persistencia de datos.
+
+    Returns:
+        pd.DataFrame: Datos limpios listos para análisis/predicción.
+    """
     force_fresh = st.session_state.pop("force_refresh", False)  # Obtiene flag de refresh forzado
 
     if not force_fresh:  # Si NO se fuerza refresh
@@ -317,7 +368,15 @@ def load_or_fetch_data(cfg, scraper, cleaner, repo):
     info_box = st.info(f"🌐 Iniciando scraping via {scraper_name}...")  # Cuadro de info con nombre del scraper
 
     def update_progress(current, total, query, records, status):
-        """Callback para actualizar barra de progreso y texto durante el scraping."""
+        """Callback para actualizar barra de progreso y texto durante el scraping.
+
+        Args:
+            current: Query actual en progreso.
+            total: Total de queries a ejecutar.
+            query: Texto de la búsqueda actual.
+            records: Número de ofertas encontradas hasta ahora.
+            status: Estado ('progress' o 'done').
+        """
         try:
             if status == "done":  # Si el scraping terminó
                 progress_bar.progress(1.0)  # Barra al 100%
@@ -401,7 +460,24 @@ def load_or_fetch_data(cfg, scraper, cleaner, repo):
 
 
 def train_or_load_model(cfg, model, df):
-    """Entrena el modelo ML o carga uno existente desde disco."""
+    """Entrena el modelo ML o carga uno existente desde disco.
+
+    Flujo:
+    1. Verifica si el modelo ya está entrenado en memoria.
+    2. Intenta cargar desde archivo .pkl en disco.
+    3. Si no existe o es inválido: entrena desde cero.
+    4. Crea columnas faltantes que el modelo requiere.
+    5. Extrae features (X) y target (y = salario_promedio).
+    6. Entrena y guarda el modelo entrenado.
+
+    Args:
+        cfg: Configuración centralizada con ruta del modelo.
+        model: Instancia del modelo (RandomForest).
+        df: DataFrame con datos de entrenamiento.
+
+    Returns:
+        Modelo entrenado y listo para predicción.
+    """
     if model.is_trained:  # Si el modelo ya está entrenado en memoria
         return model  # Retorna el modelo sin hacer nada
     try:
@@ -446,7 +522,11 @@ def train_or_load_model(cfg, model, df):
 
 
 def session_state_init():
-    """Inicializa variables de session_state de Streamlit con valores por defecto."""
+    """Inicializa variables de session_state de Streamlit con valores por defecto.
+
+    Streamlit no mantiene estado entre reruns, por lo que se usa st.session_state
+    como almacenamiento persistente en memoria para la sesión del usuario.
+    """
     if "inputs_reset" not in st.session_state:  # Flag de reset de inputs
         st.session_state.inputs_reset = False
     if "prediction_made" not in st.session_state:  # Flag de predicción realizada
@@ -468,7 +548,10 @@ def session_state_init():
 
 
 def render_source_badge():
-    """Renderiza el badge de fuente de datos en la UI (cache, scraping, etc.)."""
+    """Renderiza el badge de fuente de datos en la UI (cache, scraping, etc.).
+
+    Muestra: fuente actual, última actualización, y color según tipo de fuente.
+    """
     c = DARK_COLORS  # Colores del tema
     src = st.session_state.get("data_source", "—")  # Obtiene fuente de datos actual
     colors = {"💾": ("#6366f1", "#eef2ff"), "🌐": ("#10b981", "#d1fae5"), "📡": ("#f59e0b", "#fef3c7")}  # Colores por emoji
@@ -488,7 +571,11 @@ def render_source_badge():
 
 
 def main():
-    """Función principal de la aplicación Streamlit."""
+    """Función principal de la aplicación Streamlit.
+
+    Orquesta toda la aplicación: inicializa componentes, configura página,
+    maneja navegación por secciones, y renderiza el contenido dinámicamente.
+    """
     session_state_init()  # Inicializa variables de sesión
     render_theme_css()  # Inyecta CSS del tema azul oscuro
 
@@ -497,11 +584,16 @@ def main():
 
     cfg, scraper, cleaner, repo, model = init_components()  # Inicializa componentes (cacheados)
 
-    st.markdown(f"""  # Inyecta orbes decorativos animados de fondo
+    # Inyecta orbes decorativos animados de fondo
+    # Círculos semitransparentes que flotan suavemente para dar profundidad visual
+    st.markdown(f"""
     <div class="orb" style="width:400px;height:400px;background:{accent}08;top:-100px;left:-100px;animation-delay:0s;"></div>
     <div class="orb" style="width:300px;height:300px;background:{accent}05;bottom:-50px;right:-50px;animation-delay:3s;"></div>
     """, unsafe_allow_html=True)
 
+    # ============================================================
+    # SIDEBAR - Panel lateral izquierdo con navegación y filtros
+    # ============================================================
     with st.sidebar:  # Bloque del sidebar (panel lateral izquierdo)
         st.markdown(  # Logo y nombre de la app
             f"<div style='display:flex;align-items:center;gap:12px;margin-bottom:4px;'>"
@@ -650,24 +742,31 @@ def render_landing(c, accent, cfg):
         <text x="340" y="558" text-anchor="middle" font-family="'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#2557CC" letter-spacing="4">INTELIGENCIA SALARIAL</text>
     </svg>"""
 
+    _surf = c["surface"]  # Color de fondo de superficie
+    _surf_hi = c["surface_high"]  # Color de superficie alta
+    _glass = c["glass_border"]  # Color de borde de vidrio
+    _ov = c["outline_variant"]  # Color de contorno variante
+    _on_s = c["on_surface"]  # Color sobre superficie
+    _on_sv = c["on_surface_variant"]  # Color sobre variante de superficie
+
     st.markdown(f"""
-    <div style='background:linear-gradient(135deg,{c["surface"]},{c["surface_high"]});
-        border:1px solid {c["glass_border"]};border-radius:20px;padding:2.5rem 2rem;
+    <div style='background:linear-gradient(135deg,{_surf},{_surf_hi});
+        border:1px solid {_glass};border-radius:20px;padding:2.5rem 2rem;
         max-width:700px;margin:2rem auto;text-align:center;position:relative;z-index:1;
         box-shadow:0 8px 32px rgba(0,0,0,0.3),0 0 60px rgba(74,144,226,0.1);'>
         <div style='max-width:240px;margin:0 auto 1.5rem;'>{shield_logo}</div>
         <h1 class='main-header' style='font-size:2.5rem;margin-bottom:0.5rem;background:linear-gradient(135deg,{accent},{c['primary_container']});
         -webkit-background-clip:text;-webkit-text-fill-color:transparent;'>PredicSalario IA</h1>
-        <p style='color:{c["on_surface_variant"]};font-size:1.1rem;max-width:600px;margin:0 auto 0.5rem;'>
+        <p style='color:{_on_sv};font-size:1.1rem;max-width:600px;margin:0 auto 0.5rem;'>
         Estudio Laboral de Pertinencia de Programas de Estudio en Areas de las TICs</p>
-        <p style='color:{c["on_surface_variant"]};font-size:0.9rem;max-width:600px;margin:0 auto 0.5rem;'>
+        <p style='color:{_on_sv};font-size:0.9rem;max-width:600px;margin:0 auto 0.5rem;'>
         Prediccion de salarios del sector tecnologico en Medellin, Colombia,
         impulsada por Machine Learning con datos reales del mercado laboral.</p>
         <div style='display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:1.5rem;'>
         <a href='#metodologia' style='padding:10px 28px;background:linear-gradient(135deg,{accent},{c['primary_container']});
         color:#FFFFFF;border-radius:12px;text-decoration:none;font-weight:700;'>Explorar Metodologia</a>
-        <a href='#fuentes' style='padding:10px 28px;border:1px solid {c["outline_variant"]};
-        color:{c["on_surface"]};border-radius:12px;text-decoration:none;font-weight:500;'>Ver Fuentes</a>
+        <a href='#fuentes' style='padding:10px 28px;border:1px solid {_ov};
+        color:{_on_s};border-radius:12px;text-decoration:none;font-weight:500;'>Ver Fuentes</a>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -991,31 +1090,32 @@ def render_landing(c, accent, cfg):
 
 
 def render_system_info(c, accent, cfg):
+    """Renderiza la página de información del sistema con documentación técnica completa."""
     st.markdown(f"<h1 class='main-header' style='background:linear-gradient(135deg,{accent},{c['primary_container']});"
                 f"-webkit-background-clip:text;-webkit-text-fill-color:transparent;'>ℹ️ Informacion del Sistema</h1>",
-                unsafe_allow_html=True)
+                unsafe_allow_html=True)  # Título de la página con gradiente
     st.markdown(f"<p style='color:{c['on_surface_variant']};margin-bottom:1.5rem;'>"
                 f"Documentacion tecnica completa del modelo de IA y arquitectura del sistema.</p>",
-                unsafe_allow_html=True)
+                unsafe_allow_html=True)  # Subtítulo descriptivo
 
-    st.markdown(f"<h2 style='color:{c["on_surface"]};'>6. Modelo de IA Utilizado</h2>", unsafe_allow_html=True)
-    model_info = [
+    st.markdown(f"<h2 style='color:{c["on_surface"]};'>6. Modelo de IA Utilizado</h2>", unsafe_allow_html=True)  # Sección 6: Modelo de IA
+    model_info = [  # Lista de información del modelo
         ("Algoritmo", "Random Forest Regressor (prediccion salarial) + MLPRegressor Red Neuronal (analisis de empleabilidad)"),
         ("Librerias", "scikit-learn, pandas, numpy, plotly, streamlit, playwright"),
         ("Hiperparametros RF", f"n_estimators={cfg.MODEL_PARAMS.get('n_estimators', 100)}, max_depth={cfg.MODEL_PARAMS.get('max_depth', 10)}, random_state={cfg.RANDOM_STATE}"),
         ("Hiperparametros NN", "hidden_layer_sizes=(128, 64, 32), max_iter=500, early_stopping=True"),
         ("Tipo de aprendizaje", "Supervisado (regresion para salario, clasificacion para empleabilidad)"),
     ]
-    for label, value in model_info:
+    for label, value in model_info:  # Itera cada par label-valor
         st.markdown(f"""<div class='feature-card' style='padding:0.8rem 1.2rem;margin:0.4rem 0;'>
             <span style='font-weight:700;color:{accent};'>{label}:</span>
             <span style='color:{c["on_surface"]};margin-left:8px;'>{value}</span>
-        </div>""", unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)  # Tarjeta de info del modelo
 
-    st.divider()
+    st.divider()  # Línea divisora
 
-    st.markdown(f"<h2 style='color:{c["on_surface"]};'>7. Entrenamiento y Evaluacion</h2>", unsafe_allow_html=True)
-    eval_info = [
+    st.markdown(f"<h2 style='color:{c["on_surface"]};'>7. Entrenamiento y Evaluacion</h2>", unsafe_allow_html=True)  # Sección 7: Evaluación
+    eval_info = [  # Lista de métricas de evaluación
         ("Division de datos", f"{int((1-cfg.TEST_SIZE)*100)}% entrenamiento, {int(cfg.TEST_SIZE*100)}% prueba (test_size={cfg.TEST_SIZE})"),
         ("Metricas utilizadas", "R-squared (R²), Mean Absolute Error (MAE), Root Mean Squared Error (RMSE)"),
                 ("R² score", "0.50 (modelo actual con 500+ registros de entrenamiento)"),
@@ -1023,29 +1123,29 @@ def render_system_info(c, accent, cfg):
         ("RMSE", "$1,170,000 COP (error cuadratico medio)"),
                 ("Resultado", "El modelo logra explicar el 50% de la varianza salarial. Con mas datos de scraping mejorara significativamente."),
     ]
-    for label, value in eval_info:
+    for label, value in eval_info:  # Itera cada métrica
         st.markdown(f"""<div class='feature-card' style='padding:0.8rem 1.2rem;margin:0.4rem 0;'>
             <span style='font-weight:700;color:{accent};'>{label}:</span>
             <span style='color:{c["on_surface"]};margin-left:8px;'>{value}</span>
-        </div>""", unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)  # Tarjeta de métrica
 
-    st.divider()
+    st.divider()  # Línea divisora
 
-    st.markdown(f"<h2 style='color:{c["on_surface"]};'>8. Interpretabilidad</h2>", unsafe_allow_html=True)
-    interp_info = [
+    st.markdown(f"<h2 style='color:{c["on_surface"]};'>8. Interpretabilidad</h2>", unsafe_allow_html=True)  # Sección 8: Interpretabilidad
+    interp_info = [  # Lista de información de interpretabilidad
         ("Variables mas importantes", "Experiencia (anos), nivel de cargo (tecnico/tecnologo/ingeniero/senior), skills tecnicas, modalidad laboral"),
         ("Metodo utilizado", "Feature importance del Random Forest + Analisis de correlacion"),
         ("Explicacion del modelo", "A mayor experiencia y nivel de cargo, mayor salario. Skills como Python, AWS, Kubernetes aumentan el salario promedio. Modalidad remoto tiende a ofrecer mejores paquetes."),
     ]
-    for label, value in interp_info:
+    for label, value in interp_info:  # Itera cada item
         st.markdown(f"""<div class='feature-card' style='padding:0.8rem 1.2rem;margin:0.4rem 0;'>
             <span style='font-weight:700;color:{accent};'>{label}:</span>
             <span style='color:{c["on_surface"]};margin-left:8px;'>{value}</span>
-        </div>""", unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)  # Tarjeta de interpretabilidad
 
-    st.divider()
+    st.divider()  # Línea divisora
 
-    st.markdown(f"<h2 style='color:{c["on_surface"]};'>9. Uso del Modelo</h2>", unsafe_allow_html=True)
+    st.markdown(f"<h2 style='color:{c["on_surface"]};'>9. Uso del Modelo</h2>", unsafe_allow_html=True)  # Sección 9: Uso del modelo
     st.markdown(f"""<div class='feature-card' style='padding:1.5rem;margin:1rem 0;'>
         <div style='display:flex;flex-direction:column;gap:12px;font-size:0.9rem;'>
             <div style='display:flex;align-items:center;gap:10px;'>
@@ -1069,12 +1169,12 @@ def render_system_info(c, accent, cfg):
                 <span>Se genera el informe ejecutivo con graficos, recomendaciones y oportunidades</span>
             </div>
         </div>
-    </div>""", unsafe_allow_html=True)
+    </div>""", unsafe_allow_html=True)  # Pasos de uso del modelo
 
-    st.divider()
+    st.divider()  # Línea divisora
 
-    st.markdown(f"<h2 style='color:{c["on_surface"]};'>10. Implementacion Tecnica</h2>", unsafe_allow_html=True)
-    tech_info = [
+    st.markdown(f"<h2 style='color:{c["on_surface"]};'>10. Implementacion Tecnica</h2>", unsafe_allow_html=True)  # Sección 10: Implementación técnica
+    tech_info = [  # Lista de tecnologías implementadas
         ("Backend", "Python 3.12 + Streamlit (framework principal)"),
         ("Frontend", "Streamlit + HTML/CSS customizado con tema dark/light"),
         ("Modelo", "Archivo .pkl entrenado (salary_predictor.pkl) con hash SHA-256 de integridad"),
@@ -1082,15 +1182,15 @@ def render_system_info(c, accent, cfg):
         ("Base de datos", "Archivos CSV locales (data/raw/, data/processed/)"),
         ("Despliegue", "Ejecucion local via 'streamlit run app.py'"),
     ]
-    for label, value in tech_info:
+    for label, value in tech_info:  # Itera cada tecnología
         st.markdown(f"""<div class='feature-card' style='padding:0.8rem 1.2rem;margin:0.4rem 0;'>
             <span style='font-weight:700;color:{accent};'>{label}:</span>
             <span style='color:{c["on_surface"]};margin-left:8px;'>{value}</span>
-        </div>""", unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)  # Tarjeta de tecnología
 
-    st.divider()
+    st.divider()  # Línea divisora
 
-    st.markdown(f"<h2 style='color:{c["on_surface"]};'>11. Resultados y Valor</h2>", unsafe_allow_html=True)
+    st.markdown(f"<h2 style='color:{c["on_surface"]};'>11. Resultados y Valor</h2>", unsafe_allow_html=True)  # Sección 11: Resultados
     st.markdown(f"""<div class='feature-card' style='padding:1.5rem;margin:1rem 0;'>
         <ul style='margin:0;padding-left:1.2rem;color:{c["on_surface"]};font-size:0.9rem;'>
             <li>Reduce el tiempo de evaluacion del mercado laboral TI de horas a minutos</li>
@@ -1100,12 +1200,12 @@ def render_system_info(c, accent, cfg):
             <li>Permite filtrar por departamento (Antioquia) y nivel de cualificacion</li>
             <li>Visualiza tendencias del mercado con graficos interactivos</li>
         </ul>
-    </div>""", unsafe_allow_html=True)
+    </div>""", unsafe_allow_html=True)  # Lista de resultados y valor
 
-    st.divider()
+    st.divider()  # Línea divisora
 
-    st.markdown(f"<h2 style='color:{c["on_surface"]};'>12. Limitaciones</h2>", unsafe_allow_html=True)
-    limitations = [
+    st.markdown(f"<h2 style='color:{c["on_surface"]};'>12. Limitaciones</h2>", unsafe_allow_html=True)  # Sección 12: Limitaciones
+    limitations = [  # Lista de limitaciones del sistema
         "Dataset pequeno actualmente (~500 registros reales) - scraping en segundo plano para mas datos",
         "Sesgo geografico: Solo analiza Medellin y area metropolitana de Antioquia",
         "Sesgo temporal: Datos limitados al periodo disponible en el SENA",
@@ -1114,16 +1214,16 @@ def render_system_info(c, accent, cfg):
         "No incluye beneficios adicionales (bonos, prestaciones, auxilios)",
         "Precision variable segun calidad y cantidad de datos de entrada",
     ]
-    for lim in limitations:
+    for lim in limitations:  # Itera cada limitación
         st.markdown(f"""<div style='display:flex;align-items:center;gap:8px;padding:6px 0;'>
             <span style='color:{c["error"]};font-size:0.8rem;'>⚠️</span>
             <span style='color:{c["on_surface_variant"]};font-size:0.9rem;'>{lim}</span>
-        </div>""", unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)  # Tarjeta de limitación
 
-    st.divider()
+    st.divider()  # Línea divisora
 
-    st.markdown(f"<h2 style='color:{c["on_surface"]};'>13. Etica y Seguridad</h2>", unsafe_allow_html=True)
-    ethics_info = [
+    st.markdown(f"<h2 style='color:{c["on_surface"]};'>13. Etica y Seguridad</h2>", unsafe_allow_html=True)  # Sección 13: Ética y seguridad
+    ethics_info = [  # Lista de principios éticos
         "No se almacenan datos personales de candidatos - solo datos agregados y anonimos",
         "El modelo puede generar sesgos si los datos estan desbalanceados por genero o region",
         "Se recomienda usar el modelo como herramienta de apoyo, no como unico criterio de decision",
@@ -1132,102 +1232,102 @@ def render_system_info(c, accent, cfg):
         "Hash SHA-256 garantiza la integridad del modelo entrenado",
         "Se recomienda re-entrenar periodicamente con datos actualizados para mantener la pertinencia",
     ]
-    for item in ethics_info:
+    for item in ethics_info:  # Itera cada principio
         st.markdown(f"""<div style='display:flex;align-items:center;gap:8px;padding:6px 0;'>
             <span style='color:{accent};font-size:0.8rem;'>✅</span>
             <span style='color:{c["on_surface_variant"]};font-size:0.9rem;'>{item}</span>
-        </div>""", unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)  # Tarjeta de principio ético
 
-    st.divider()
+    st.divider()  # Línea divisora
 
-    st.markdown(f"<h2 style='color:{c["on_surface"]};'>📊 Fuentes de Datos en Tiempo Real</h2>", unsafe_allow_html=True)
-    for src in cfg.DATA_SOURCES:
+    st.markdown(f"<h2 style='color:{c["on_surface"]};'>📊 Fuentes de Datos en Tiempo Real</h2>", unsafe_allow_html=True)  # Sección de fuentes de datos
+    for src in cfg.DATA_SOURCES:  # Itera cada fuente de datos del config
         st.markdown(f"""<div class='feature-card' style='padding:0.8rem 1.2rem;margin:0.4rem 0;'>
             <span style='font-size:1.2rem;'>{src['icon']}</span>
             <span style='font-weight:700;color:{accent};margin-left:8px;'>{src['name']}</span>
             <span style='color:{c["on_surface_variant"]};margin-left:8px;font-size:0.85rem;'>{src['description']}</span>
-        </div>""", unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)  # Tarjeta de fuente de datos
 
-    st.divider()
+    st.divider()  # Línea divisora
 
-    st.markdown(f"<h2 style='color:{c["on_surface"]};'>🔍 Auditoria de APIs</h2>", unsafe_allow_html=True)
-    st.markdown(f"<p style='color:{c["on_surface_variant"]};font-size:0.9rem;'>Estado actual de cada API y fuente de datos.</p>", unsafe_allow_html=True)
+    st.markdown(f"<h2 style='color:{c["on_surface"]};'>🔍 Auditoria de APIs</h2>", unsafe_allow_html=True)  # Sección de auditoría de APIs
+    st.markdown(f"<p style='color:{c["on_surface_variant"]};font-size:0.9rem;'>Estado actual de cada API y fuente de datos.</p>", unsafe_allow_html=True)  # Descripción de la auditoría
 
-    if st.button("🔄 Verificar estado de APIs", key="btn_audit_apis", type="primary"):
-        with st.spinner("Verificando APIs..."):
-            audit_results = []
+    if st.button("🔄 Verificar estado de APIs", key="btn_audit_apis", type="primary"):  # Botón para ejecutar auditoría
+        with st.spinner("Verificando APIs..."):  # Muestra spinner mientras verifica
+            audit_results = []  # Lista de resultados de auditoría
 
-            # Playwright
+            # Playwright  # Prueba de Playwright scraper
             try:
-                from src.scraper.playwright_scraper import PlaywrightScraper
-                pw = PlaywrightScraper()
-                data = pw.fetch_data(["python developer medellin"])
-                audit_results.append({"api": "Playwright", "estado": "OK", "registros": len(data), "fuente": "elempleo.com", "token": "No requiere", "renovacion": "N/A"})
-            except Exception as e:
-                audit_results.append({"api": "Playwright", "estado": "ERROR", "registros": 0, "fuente": "elempleo.com", "token": "No requiere", "renovacion": "N/A", "error": str(e)[:50]})
+                from src.scraper.playwright_scraper import PlaywrightScraper  # Importa scraper
+                pw = PlaywrightScraper()  # Instancia scraper
+                data = pw.fetch_data(["python developer medellin"])  # Prueba con query de prueba
+                audit_results.append({"api": "Playwright", "estado": "OK", "registros": len(data), "fuente": "elempleo.com", "token": "No requiere", "renovacion": "N/A"})  # Resultado OK
+            except Exception as e:  # Si falla
+                audit_results.append({"api": "Playwright", "estado": "ERROR", "registros": 0, "fuente": "elempleo.com", "token": "No requiere", "renovacion": "N/A", "error": str(e)[:50]})  # Resultado ERROR
 
-            # HTTP cloudscraper
+            # HTTP cloudscraper  # Prueba de HTTP scraper
             try:
-                from src.scraper.http_scraper import HttpScraper
-                hs = HttpScraper()
-                data = hs.fetch_data(["javascript developer medellin"])
-                audit_results.append({"api": "HTTP cloudscraper", "estado": "OK", "registros": len(data), "fuente": "elempleo.com", "token": "No requiere", "renovacion": "N/A"})
-            except Exception as e:
-                audit_results.append({"api": "HTTP cloudscraper", "estado": "ERROR", "registros": 0, "fuente": "elempleo.com", "token": "No requiere", "renovacion": "N/A", "error": str(e)[:50]})
+                from src.scraper.http_scraper import HttpScraper  # Importa scraper
+                hs = HttpScraper()  # Instancia scraper
+                data = hs.fetch_data(["javascript developer medellin"])  # Prueba con query de prueba
+                audit_results.append({"api": "HTTP cloudscraper", "estado": "OK", "registros": len(data), "fuente": "elempleo.com", "token": "No requiere", "renovacion": "N/A"})  # Resultado OK
+            except Exception as e:  # Si falla
+                audit_results.append({"api": "HTTP cloudscraper", "estado": "ERROR", "registros": 0, "fuente": "elempleo.com", "token": "No requiere", "renovacion": "N/A", "error": str(e)[:50]})  # Resultado ERROR
 
-            # Wikipedia
+            # Wikipedia  # Prueba de Wikipedia API
             try:
-                import requests as req
-                r = req.get("https://es.wikipedia.org/w/api.php", params={"action": "parse", "page": "Area metropolitana del Valle de Aburra", "prop": "text", "format": "json"}, headers={"User-Agent": "PredicSalarioIA/1.0"}, timeout=10)
-                wiki_ok = r.status_code == 200 and "parse" in r.json()
-                audit_results.append({"api": "Wikipedia API", "estado": "OK" if wiki_ok else f"HTTP {r.status_code}", "registros": 10 if wiki_ok else 0, "fuente": "Wikipedia", "token": "No requiere", "renovacion": "N/A"})
-            except Exception as e:
-                audit_results.append({"api": "Wikipedia API", "estado": "ERROR", "registros": 0, "fuente": "Wikipedia", "token": "No requiere", "renovacion": "N/A", "error": str(e)[:50]})
+                import requests as req  # Importa requests
+                r = req.get("https://es.wikipedia.org/w/api.php", params={"action": "parse", "page": "Area metropolitana del Valle de Aburra", "prop": "text", "format": "json"}, headers={"User-Agent": "PredicSalarioIA/1.0"}, timeout=10)  # Consulta Wikipedia
+                wiki_ok = r.status_code == 200 and "parse" in r.json()  # Verifica respuesta válida
+                audit_results.append({"api": "Wikipedia API", "estado": "OK" if wiki_ok else f"HTTP {r.status_code}", "registros": 10 if wiki_ok else 0, "fuente": "Wikipedia", "token": "No requiere", "renovacion": "N/A"})  # Resultado OK o error
+            except Exception as e:  # Si falla
+                audit_results.append({"api": "Wikipedia API", "estado": "ERROR", "registros": 0, "fuente": "Wikipedia", "token": "No requiere", "renovacion": "N/A", "error": str(e)[:50]})  # Resultado ERROR
 
-            # Google News
+            # Google News  # Prueba de Google News RSS
             try:
-                from src.utils.news import fetch_news
-                news = fetch_news()
-                audit_results.append({"api": "Google News RSS", "estado": "OK" if news else "VACIO", "registros": len(news) if news else 0, "fuente": "Google News", "token": "No requiere", "renovacion": "N/A"})
-            except Exception as e:
-                audit_results.append({"api": "Google News RSS", "estado": "ERROR", "registros": 0, "fuente": "Google News", "token": "No requiere", "renovacion": "N/A", "error": str(e)[:50]})
+                from src.utils.news import fetch_news  # Importa fetch_news
+                news = fetch_news()  # Obtiene noticias
+                audit_results.append({"api": "Google News RSS", "estado": "OK" if news else "VACIO", "registros": len(news) if news else 0, "fuente": "Google News", "token": "No requiere", "renovacion": "N/A"})  # Resultado OK o vacío
+            except Exception as e:  # Si falla
+                audit_results.append({"api": "Google News RSS", "estado": "ERROR", "registros": 0, "fuente": "Google News", "token": "No requiere", "renovacion": "N/A", "error": str(e)[:50]})  # Resultado ERROR
 
-            # Groq API
-            from src.utils.environment import get_groq_key
-            groq_key = get_groq_key()
-            if groq_key:
+            # Groq API  # Prueba de Groq API
+            from src.utils.environment import get_groq_key  # Importa get_groq_key
+            groq_key = get_groq_key()  # Obtiene la key
+            if groq_key:  # Si hay key configurada
                 try:
-                    import requests as _req
-                    r = _req.post("https://api.groq.com/openai/v1/chat/completions", headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"}, json={"model": "llama-3.3-70b-versatile", "messages": [{"role": "user", "content": "OK"}], "max_tokens": 3}, timeout=10)
-                    audit_results.append({"api": "Groq API", "estado": "OK" if r.status_code == 200 else f"HTTP {r.status_code}", "registros": 1, "fuente": "Groq Cloud", "token": "GROQ_API_KEY", "renovacion": "No expira (gratis)"})
-                except Exception as e:
-                    audit_results.append({"api": "Groq API", "estado": "ERROR", "registros": 0, "fuente": "Groq Cloud", "token": "GROQ_API_KEY", "renovacion": "No expira (gratis)", "error": str(e)[:50]})
-            else:
-                audit_results.append({"api": "Groq API", "estado": "SIN KEY", "registros": 0, "fuente": "Groq Cloud", "token": "GROQ_API_KEY (no configurada)", "renovacion": "No expira (gratis)"})
+                    import requests as _req  # Importa requests
+                    r = _req.post("https://api.groq.com/openai/v1/chat/completions", headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"}, json={"model": "llama-3.3-70b-versatile", "messages": [{"role": "user", "content": "OK"}], "max_tokens": 3}, timeout=10)  # Prueba de Groq API
+                    audit_results.append({"api": "Groq API", "estado": "OK" if r.status_code == 200 else f"HTTP {r.status_code}", "registros": 1, "fuente": "Groq Cloud", "token": "GROQ_API_KEY", "renovacion": "No expira (gratis)"})  # Resultado OK o error
+                except Exception as e:  # Si falla
+                    audit_results.append({"api": "Groq API", "estado": "ERROR", "registros": 0, "fuente": "Groq Cloud", "token": "GROQ_API_KEY", "renovacion": "No expira (gratis)", "error": str(e)[:50]})  # Resultado ERROR
+            else:  # Si no hay key
+                audit_results.append({"api": "Groq API", "estado": "SIN KEY", "registros": 0, "fuente": "Groq Cloud", "token": "GROQ_API_KEY (no configurada)", "renovacion": "No expira (gratis)"})  # Resultado SIN KEY
 
-            # Real data files
-            _repo = DataRepository(cfg.RAW_DATA_DIR, cfg.PROCESSED_DATA_DIR)
-            _raw_files = _repo.list_raw_files()
-            _raw_count = len(_raw_files) if _raw_files else 0
-            if _raw_files:
-                audit_results.append({"api": "Datos reales", "estado": "OK", "registros": f"{_raw_count} archivos", "fuente": "elempleo.com scraping", "token": "N/A", "renovacion": "N/A"})
-            else:
-                audit_results.append({"api": "Datos reales", "estado": "SIN DATOS", "registros": 0, "fuente": "elempleo.com", "token": "N/A", "renovacion": "N/A"})
+            # Real data files  # Verifica archivos de datos reales
+            _repo = DataRepository(cfg.RAW_DATA_DIR, cfg.PROCESSED_DATA_DIR)  # Instancia repositorio
+            _raw_files = _repo.list_raw_files()  # Lista archivos raw
+            _raw_count = len(_raw_files) if _raw_files else 0  # Cuenta archivos
+            if _raw_files:  # Si hay archivos
+                audit_results.append({"api": "Datos reales", "estado": "OK", "registros": f"{_raw_count} archivos", "fuente": "elempleo.com scraping", "token": "N/A", "renovacion": "N/A"})  # Resultado OK
+            else:  # Si no hay archivos
+                audit_results.append({"api": "Datos reales", "estado": "SIN DATOS", "registros": 0, "fuente": "elempleo.com", "token": "N/A", "renovacion": "N/A"})  # Resultado SIN DATOS
 
-            st.session_state.audit_results = audit_results
+            st.session_state.audit_results = audit_results  # Guarda resultados en session_state
 
-    if st.session_state.get("audit_results"):
-        results = st.session_state.audit_results
-        ok_count = sum(1 for r in results if r["estado"] == "OK")
-        total = len(results)
+    if st.session_state.get("audit_results"):  # Si hay resultados de auditoría guardados
+        results = st.session_state.audit_results  # Obtiene resultados
+        ok_count = sum(1 for r in results if r["estado"] == "OK")  # Cuenta APIs OK
+        total = len(results)  # Total de APIs
 
         st.markdown(f"""<div class='feature-card' style='padding:1rem;margin-bottom:1rem;border-left:4px solid {"#2557CC" if ok_count == total else "#ba1a1a"};'>
             <p style='margin:0;font-weight:700;'>Estado: {ok_count}/{total} APIs funcionales</p>
-        </div>""", unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)  # Resumen de estado
 
-        for r in results:
-            icon = "✅" if r["estado"] == "OK" else "⚠️" if "SIN" in r["estado"] else "❌"
-            color = "#2557CC" if r["estado"] == "OK" else "#ba1a1a"
+        for r in results:  # Itera cada resultado
+            icon = "✅" if r["estado"] == "OK" else "⚠️" if "SIN" in r["estado"] else "❌"  # Icono según estado
+            color = "#2557CC" if r["estado"] == "OK" else "#ba1a1a"  # Color según estado
             st.markdown(f"""<div class='feature-card' style='padding:0.8rem 1.2rem;margin:0.4rem 0;border-left:3px solid {color};'>
                 <div style='display:flex;justify-content:space-between;align-items:center;'>
                     <div>
@@ -1242,88 +1342,89 @@ def render_system_info(c, accent, cfg):
                 <div style='margin-top:4px;font-size:0.8rem;color:{c["on_surface_variant"]};'>
                     Token: {r.get('token', 'N/A')} | Renovacion: {r.get('renovacion', 'N/A')}
                 </div>
-            </div>""", unsafe_allow_html=True)
+            </div>""", unsafe_allow_html=True)  # Tarjeta de resultado de API
 
 
 def render_settings(cfg):
-    c = DARK_COLORS
-    accent = "#4A90E2"
+    """Renderiza la página de configuración del sistema con opciones de datos y caché."""
+    c = DARK_COLORS  # Paleta de colores oscuros
+    accent = "#4A90E2"  # Color de acento azul
 
-    st.markdown(f"<h1 class='main-header'>⚙️ Configuración</h1>", unsafe_allow_html=True)
-    st.divider()
+    st.markdown(f"<h1 class='main-header'>⚙️ Configuración</h1>", unsafe_allow_html=True)  # Título de la página
+    st.divider()  # Línea divisora
 
-    col1, col2 = st.columns(2)
+    col1, col2 = st.columns(2)  # Divide en 2 columnas
 
-    with col1:
+    with col1:  # Columna izquierda: Fuente de datos
         st.markdown(f"<div class='feature-card' style='padding:1.5rem;'>"
-                    f"<h3>🔌 Fuente de Datos</h3>", unsafe_allow_html=True)
-        src = st.session_state.get("data_source", "—")
-        st.markdown(f"**Actual:** {src}")
-        st.markdown(f"**Última actualización:** {st.session_state.get('last_update', '—')}")
-        st.markdown(f"**Scraper:** Playwright (navegador headless)")
-        st.markdown(f"**Caché activa:** {'✅ Usando caché' if st.session_state.get('use_cache', True) else '❌ Forzando datos frescos'}")
-        st.markdown("**Portal fuente:** [elempleo.com](https://www.elempleo.com)")
-        st.markdown("</div>", unsafe_allow_html=True)
+                    f"<h3>🔌 Fuente de Datos</h3>", unsafe_allow_html=True)  # Tarjeta de fuente de datos
+        src = st.session_state.get("data_source", "—")  # Obtiene fuente actual
+        st.markdown(f"**Actual:** {src}")  # Muestra fuente actual
+        st.markdown(f"**Última actualización:** {st.session_state.get('last_update', '—')}")  # Muestra última actualización
+        st.markdown(f"**Scraper:** Playwright (navegador headless)")  # Muestra tipo de scraper
+        st.markdown(f"**Caché activa:** {'✅ Usando caché' if st.session_state.get('use_cache', True) else '❌ Forzando datos frescos'}")  # Estado de caché
+        st.markdown("**Portal fuente:** [elempleo.com](https://www.elempleo.com)")  # Enlace a fuente
+        st.markdown("</div>", unsafe_allow_html=True)  # Cierra tarjeta
 
-    with col2:
-        ciudades_filter = st.session_state.get("ciudades_filter", [])
-        if ciudades_filter:
+    with col2:  # Columna derecha: Filtro de municipios
+        ciudades_filter = st.session_state.get("ciudades_filter", [])  # Obtiene filtro actual
+        if ciudades_filter:  # Si hay municipios seleccionados
             st.markdown(f"<div class='feature-card' style='padding:1.5rem;'>"
                         f"<h3>🗺️ Municipios Seleccionados</h3>"
                         f"<p style='margin:0;'>Usa el filtro del <strong>menú lateral ←</strong> para cambiar.</p>"
                         f"<p style='margin:0.5rem 0 0;font-weight:600;'>📍 {', '.join(ciudades_filter)}</p>"
-                        f"</div>", unsafe_allow_html=True)
-        else:
+                        f"</div>", unsafe_allow_html=True)  # Muestra municipios seleccionados
+        else:  # Si no hay filtro
             st.markdown(f"<div class='feature-card' style='padding:1.5rem;'>"
                         f"<h3>🗺️ Filtro por Municipio</h3>"
                         f"<p style='margin:0;'>Usa el filtro del <strong>menú lateral ←</strong> para seleccionar municipios del AMVA.</p>"
                         f"<p style='margin:0.5rem 0 0;color:{c['on_surface_variant']};'>Mostrando todos los municipios.</p>"
-                        f"</div>", unsafe_allow_html=True)
+                        f"</div>", unsafe_allow_html=True)  # Muestra mensaje de filtro
 
-    st.divider()
+    st.divider()  # Línea divisora
 
-    col3, col4 = st.columns(2)
-    with col3:
+    col3, col4 = st.columns(2)  # Divide en 2 columnas más
+    with col3:  # Columna izquierda: Gestión de datos
         st.markdown(f"<div class='feature-card' style='padding:1.5rem;'>"
-                    f"<h3>🧹 Gestión de Datos</h3>", unsafe_allow_html=True)
-        if st.button("🗑️ Limpiar caché y recargar", use_container_width=True):
-            raw_dir = cfg.RAW_DATA_DIR
-            proc_dir = cfg.PROCESSED_DATA_DIR
-            for f in raw_dir.glob("*"):
-                f.unlink()
-            for f in proc_dir.glob("*"):
-                f.unlink()
-            model_path = cfg.MODEL_PATH
-            if model_path.exists():
-                model_path.unlink()
-            st.session_state.data_source = "—"
-            st.session_state.last_update = None
-            st.toast("🧹 Caché limpiado. Recarga la página.", icon="🧹")
-            st.rerun()
-        if st.button("🔄 Forzar actualización desde elempleo.com", use_container_width=True, type="primary"):
-            st.session_state.force_refresh = True
-            st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
+                    f"<h3>🧹 Gestión de Datos</h3>", unsafe_allow_html=True)  # Tarjeta de gestión de datos
+        if st.button("🗑️ Limpiar caché y recargar", use_container_width=True):  # Botón para limpiar caché
+            raw_dir = cfg.RAW_DATA_DIR  # Directorio raw
+            proc_dir = cfg.PROCESSED_DATA_DIR  # Directorio procesado
+            for f in raw_dir.glob("*"):  # Itera archivos raw
+                f.unlink()  # Elimina cada archivo
+            for f in proc_dir.glob("*"):  # Itera archivos procesados
+                f.unlink()  # Elimina cada archivo
+            model_path = cfg.MODEL_PATH  # Ruta del modelo
+            if model_path.exists():  # Si existe el modelo
+                model_path.unlink()  # Lo elimina
+            st.session_state.data_source = "—"  # Resetea fuente
+            st.session_state.last_update = None  # Resetea última actualización
+            st.toast("🧹 Caché limpiado. Recarga la página.", icon="🧹")  # Muestra toast de confirmación
+            st.rerun()  # Recarga la app
+        if st.button("🔄 Forzar actualización desde elempleo.com", use_container_width=True, type="primary"):  # Botón para forzar refresh
+            st.session_state.force_refresh = True  # Marca force_refresh
+            st.rerun()  # Recarga la app
+        st.markdown("</div>", unsafe_allow_html=True)  # Cierra tarjeta
 
-    with col4:
+    with col4:  # Columna derecha: Estado del sistema
         st.markdown(f"<div class='feature-card' style='padding:1.5rem;'>"
-                    f"<h3>📊 Estado del Sistema</h3>", unsafe_allow_html=True)
-        st.markdown(f"**Modelo:** Random Forest Regressor")
-        st.markdown(f"**Features:** experiencia, cargo_nivel, modalidad, skills")
-        st.markdown(f"**Confianza:** ±20%")
-        st.markdown(f"**Casos de uso:** {len(SKILL_KEYWORDS)} skills detectables")
-        st.markdown("</div>", unsafe_allow_html=True)
+                    f"<h3>📊 Estado del Sistema</h3>", unsafe_allow_html=True)  # Tarjeta de estado
+        st.markdown(f"**Modelo:** Random Forest Regressor")  # Tipo de modelo
+        st.markdown(f"**Features:** experiencia, cargo_nivel, modalidad, skills")  # Features del modelo
+        st.markdown(f"**Confianza:** ±20%")  # Confianza del modelo
+        st.markdown(f"**Casos de uso:** {len(SKILL_KEYWORDS)} skills detectables")  # Cantidad de skills
+        st.markdown("</div>", unsafe_allow_html=True)  # Cierra tarjeta
 
-    st.divider()
+    st.divider()  # Línea divisora
     st.markdown(f"<p style='text-align:center;color:{c["on_surface_variant"]};font-size:0.8rem;'>"
                 f"PredicSalario IA v1.0 · Los datos provienen de {src} · "
-                f"© {datetime.date.today().year}</p>", unsafe_allow_html=True)
+                f"© {datetime.date.today().year}</p>", unsafe_allow_html=True)  # Footer de configuración
 
 
 def _render_autorefresh(interval_seconds: int = 300):
     """Auto-refresh the page every interval_seconds using JavaScript."""
-    import streamlit.components.v1 as components
-    components.html(
+    import streamlit.components.v1 as components  # Importa componentes de Streamlit
+    components.html(  # Inyecta HTML con JavaScript
         f"""<script>
             setTimeout(function() {{
                 window.parent.location.reload();
@@ -1334,218 +1435,220 @@ def _render_autorefresh(interval_seconds: int = 300):
 
 
 def render_market_analysis(cfg, scraper, cleaner, repo, model):
-    from src.visualization.dashboard import render_dashboard
-    from src.visualization.charts import salary_by_role
+    """Renderiza la página de análisis del mercado laboral con gráficos y KPIs."""
+    from src.visualization.dashboard import render_dashboard  # Importa dashboard de visualización
+    from src.visualization.charts import salary_by_role  # Importa gráfico de salario por rol
 
-    c = DARK_COLORS
-    accent = "#4A90E2"
+    c = DARK_COLORS  # Paleta de colores oscuros
+    accent = "#4A90E2"  # Color de acento azul
 
-    scraper_name = type(scraper).__name__
-    from src.utils.environment import is_streamlit_cloud
-    on_cloud = is_streamlit_cloud()
+    scraper_name = type(scraper).__name__  # Nombre de la clase del scraper
+    from src.utils.environment import is_streamlit_cloud  # Importa verificación de Streamlit Cloud
+    on_cloud = is_streamlit_cloud()  # Verifica si está en Streamlit Cloud
 
-    # Build dynamic label with source stats
-    if hasattr(scraper, "get_source_stats"):
-        stats = scraper.get_source_stats()
-        sources = stats.get("sources", [])
-        num_sources = len(sources)
-        num_queries = len(cfg.SEARCH_QUERIES)
-        scraper_label = f"Multi-fuente ({num_sources} portales, {num_queries} queries)"
-    else:
-        scraper_label = {
+    # Build dynamic label with source stats  # Construye etiqueta dinámica con estadísticas
+    if hasattr(scraper, "get_source_stats"):  # Si el scraper tiene estadísticas
+        stats = scraper.get_source_stats()  # Obtiene estadísticas
+        sources = stats.get("sources", [])  # Lista de fuentes
+        num_sources = len(sources)  # Cantidad de fuentes
+        num_queries = len(cfg.SEARCH_QUERIES)  # Cantidad de queries
+        scraper_label = f"Multi-fuente ({num_sources} portales, {num_queries} queries)"  # Etiqueta multi-fuente
+    else:  # Si no tiene estadísticas
+        scraper_label = {  # Mapa de nombres de scraper a etiquetas
             "PlaywrightScraper": "Playwright (navegador real)" if not on_cloud else "HTTP cloudscraper",
             "HttpScraper": "HTTP cloudscraper (bypass Cloudflare)",
             "ZenRowsScraper": "ZenRows API (Cloudflare bypass)",
-        }.get(scraper_name, scraper_name)
+        }.get(scraper_name, scraper_name)  # Obtiene etiqueta o usa nombre de clase
 
-    col_title, col_btn = st.columns([3, 1])
-    with col_title:
-        st.markdown(f"<h1 class='main-header'>📊 Análisis del Mercado Laboral TI</h1>", unsafe_allow_html=True)
-    with col_btn:
-        render_source_badge()
-        if st.button("🔄 Actualizar datos", use_container_width=True, key="refresh_market"):
-            st.session_state.force_refresh = True
-            st.rerun()
+    col_title, col_btn = st.columns([3, 1])  # Divide en 2 columnas (título y botón)
+    with col_title:  # Columna del título
+        st.markdown(f"<h1 class='main-header'>📊 Análisis del Mercado Laboral TI</h1>", unsafe_allow_html=True)  # Título de la página
+    with col_btn:  # Columna del botón
+        render_source_badge()  # Muestra badge de fuente
+        if st.button("🔄 Actualizar datos", use_container_width=True, key="refresh_market"):  # Botón de refresh
+            st.session_state.force_refresh = True  # Marca force_refresh
+            st.rerun()  # Recarga la app
 
-    _render_autorefresh(AUTOREFRESH_INTERVAL)
+    _render_autorefresh(AUTOREFRESH_INTERVAL)  # Activa auto-refresh
 
-    st.markdown(
+    st.markdown(  # Descripción de la página
         f"<p style='color:{c["on_surface_variant"]};'>Ofertas de empleo para técnicos, "
         "tecnólogos e ingenieros de sistemas/software en Medellín y Área Metropolitana. "
         f"<small style='color:{c["on_surface_variant"]};'>⏱️ Actualización automática cada 5 minutos.</small></p>",
         unsafe_allow_html=True,
     )
-    if hasattr(scraper, "get_source_stats"):
-        source_names = scraper.get_source_stats().get("sources", [])
-        source_display = " + ".join(source_names)
-        num_sources = len(source_names)
-        num_queries = len(cfg.SEARCH_QUERIES)
-    else:
-        source_display = "elempleo.com"
-        num_sources = 1
-        num_queries = len(cfg.SEARCH_QUERIES)
+    if hasattr(scraper, "get_source_stats"):  # Si el scraper tiene estadísticas
+        source_names = scraper.get_source_stats().get("sources", [])  # Nombres de fuentes
+        source_display = " + ".join(source_names)  # Joined para mostrar
+        num_sources = len(source_names)  # Cantidad de fuentes
+        num_queries = len(cfg.SEARCH_QUERIES)  # Cantidad de queries
+    else:  # Si no tiene estadísticas
+        source_display = "elempleo.com"  # Fuente por defecto
+        num_sources = 1  # Una fuente
+        num_queries = len(cfg.SEARCH_QUERIES)  # Cantidad de queries
     st.markdown(f"""<div style='background:#152031;border:1px solid {accent}40;border-radius:8px;padding:0.6rem 1rem;margin-bottom:1rem;font-size:0.8rem;'>
         <span style='color:{c["on_surface_variant"]};'>📡 Scraping via:</span> <strong style='color:{accent};'>{scraper_label}</strong>
         <span style='color:{c["on_surface_variant"]};margin-left:1rem;'>🌐 Fuentes:</span> <strong style='color:{accent};'>{source_display}</strong>
         <span style='color:{c["on_surface_variant"]};margin-left:1rem;'>🔍 Queries:</span> <strong style='color:{accent};'>{num_queries} búsquedas</strong>
         <span style='color:{c["on_surface_variant"]};margin-left:1rem;'>💰 Token:</span> <strong style='color:#2557CC;'>No requiere</strong>
-    </div>""", unsafe_allow_html=True)
-    st.divider()
+    </div>""", unsafe_allow_html=True)  # Barra de info de scraping
+    st.divider()  # Línea divisora
 
-    with st.spinner("Cargando datos del mercado..."):
-        df = load_or_fetch_data(cfg, scraper, cleaner, repo)
+    with st.spinner("Cargando datos del mercado..."):  # Muestra spinner mientras carga
+        df = load_or_fetch_data(cfg, scraper, cleaner, repo)  # Carga datos del mercado
 
-    if df is None or df.empty:
-        st.error("### ⚠️ No hay datos disponibles")
+    if df is None or df.empty:  # Si no hay datos
+        st.error("### ⚠️ No hay datos disponibles")  # Muestra error
         st.warning("""#### 🔍 No se encontraron ofertas
         No se pudieron obtener datos del mercado laboral.
         Se están usando datos de ejemplo. Intenta de nuevo más tarde.
-        """)
-        return
+        """)  # Muestra advertencia
+        return  # Sale de la función
 
-    # Ensure ciudad column exists
-    if "ciudad" not in df.columns:
-        if "ubicacion" in df.columns:
-            df["ciudad"] = df["ubicacion"].apply(extract_ciudad)
-        else:
-            df["ciudad"] = "Medellín"
+    # Ensure ciudad column exists  # Asegura que exista la columna ciudad
+    if "ciudad" not in df.columns:  # Si no existe la columna
+        if "ubicacion" in df.columns:  # Si hay columna ubicacion
+            df["ciudad"] = df["ubicacion"].apply(extract_ciudad)  # Extrae ciudad de ubicación
+        else:  # Si no hay ubicacion
+            df["ciudad"] = "Medellín"  # Valor por defecto
 
-    # Metro area filter
-    ciudades_filter = st.session_state.get("ciudades_filter", [])
-    if ciudades_filter:
-        df_filtrada = df[df["ciudad"].isin(ciudades_filter)]
-        st.markdown(f"📍 Filtrando por: **{', '.join(ciudades_filter)}** ({len(df_filtrada)} ofertas)")
-    else:
-        df_filtrada = df
-        st.markdown(f"📍 Mostrando **todos los municipios** del Área Metropolitana ({len(df_filtrada)} ofertas)")
+    # Metro area filter  # Filtro de área metropolitana
+    ciudades_filter = st.session_state.get("ciudades_filter", [])  # Obtiene filtro de session_state
+    if ciudades_filter:  # Si hay filtro activo
+        df_filtrada = df[df["ciudad"].isin(ciudades_filter)]  # Filtra por ciudades seleccionadas
+        st.markdown(f"📍 Filtrando por: **{', '.join(ciudades_filter)}** ({len(df_filtrada)} ofertas)")  # Muestra filtro
+    else:  # Si no hay filtro
+        df_filtrada = df  # Usa todos los datos
+        st.markdown(f"📍 Mostrando **todos los municipios** del Área Metropolitana ({len(df_filtrada)} ofertas)")  # Muestra que muestra todo
 
-    # City distribution
-    ciudad_counts = df_filtrada["ciudad"].value_counts()
-    st.markdown("### 🏙️ Distribución por Municipio")
-    cc = st.columns(len(ciudad_counts) if len(ciudad_counts) <= 5 else 5)
-    for i, (city, count) in enumerate(ciudad_counts.head(5).items()):
-        with cc[i % len(cc)]:
-            st.markdown(
+    # City distribution  # Distribución por ciudad
+    ciudad_counts = df_filtrada["ciudad"].value_counts()  # Cuenta ofertas por ciudad
+    st.markdown("### 🏙️ Distribución por Municipio")  # Título de sección
+    cc = st.columns(len(ciudad_counts) if len(ciudad_counts) <= 5 else 5)  # Crea columnas (máx 5)
+    for i, (city, count) in enumerate(ciudad_counts.head(5).items()):  # Itera top 5 ciudades
+        with cc[i % len(cc)]:  # Columna actual (rotando)
+            st.markdown(  # Muestra tarjeta de métrica por ciudad
                 f"<div class='metric-card' style='text-align:center;'>"
                 f"<p style='color:{c["on_surface_variant"]};font-size:0.75rem;margin:0;'>{city}</p>"
                 f"<h2 style='color:{accent};margin:0;font-size:1.5rem;'>{count}</h2></div>",
                 unsafe_allow_html=True,
             )
 
-    st.divider()
+    st.divider()  # Línea divisora
 
-    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-    with kpi1:
+    kpi1, kpi2, kpi3, kpi4 = st.columns(4)  # 4 columnas de KPIs
+    with kpi1:  # KPI 1: Ofertas analizadas
         st.markdown(
             f"<div class='metric-card'><p style='color:{c["on_surface_variant"]};font-size:0.85rem;'>Ofertas Analizadas</p>"
             f"<h2 style='color:{accent};'>{len(df_filtrada)}</h2></div>",
             unsafe_allow_html=True,
         )
-    with kpi2:
-        avg_sal = df_filtrada["salario_promedio"].mean()
+    with kpi2:  # KPI 2: Salario promedio
+        avg_sal = df_filtrada["salario_promedio"].mean()  # Calcula promedio
         st.markdown(
             f"<div class='metric-card'><p style='color:{c["on_surface_variant"]};font-size:0.85rem;'>Salario Promedio</p>"
             f"<h2 style='color:{accent};'>${avg_sal:,.0f}</h2></div>",
             unsafe_allow_html=True,
         )
-    with kpi3:
-        top_level = df_filtrada["cargo_nivel"].value_counts().idxmax() if "cargo_nivel" in df_filtrada.columns else "N/A"
+    with kpi3:  # KPI 3: Nivel más frecuente
+        top_level = df_filtrada["cargo_nivel"].value_counts().idxmax() if "cargo_nivel" in df_filtrada.columns else "N/A"  # Nivel más común
         st.markdown(
             f"<div class='metric-card'><p style='color:{c["on_surface_variant"]};font-size:0.85rem;'>Nivel Más Frecuente</p>"
             f"<h2 style='color:{accent};'>{top_level.title()}</h2></div>",
             unsafe_allow_html=True,
         )
-    with kpi4:
-        top_modal = df_filtrada["modalidad_clean"].value_counts().idxmax() if "modalidad_clean" in df_filtrada.columns else "N/A"
+    with kpi4:  # KPI 4: Modalidad principal
+        top_modal = df_filtrada["modalidad_clean"].value_counts().idxmax() if "modalidad_clean" in df_filtrada.columns else "N/A"  # Modalidad más común
         st.markdown(
             f"<div class='metric-card'><p style='color:{c["on_surface_variant"]};font-size:0.85rem;'>Modalidad Principal</p>"
             f"<h2 style='color:{accent};'>{top_modal.title()}</h2></div>",
             unsafe_allow_html=True,
         )
 
-    st.divider()
+    st.divider()  # Línea divisora
 
-    df_clean = df_filtrada.dropna(subset=["salario_promedio", "cargo_nivel", "experiencia_requerida"])
-    if len(df_clean) > 5:
-        render_dashboard(df_clean)
-    else:
-        st.warning("No hay suficientes datos para generar gráficos.")
+    df_clean = df_filtrada.dropna(subset=["salario_promedio", "cargo_nivel", "experiencia_requerida"])  # Limpia NaN para gráficos
+    if len(df_clean) > 5:  # Si hay suficientes datos
+        render_dashboard(df_clean)  # Renderiza dashboard completo
+    else:  # Si no hay suficientes datos
+        st.warning("No hay suficientes datos para generar gráficos.")  # Muestra advertencia
 
-    st.divider()
-    st.markdown("### 💼 Salario por Rol Laboral")
-    st.markdown(
+    st.divider()  # Línea divisora
+    st.markdown("### 💼 Salario por Rol Laboral")  # Título de sección de salario por rol
+    st.markdown(  # Descripción
         f"<p style='color:{c["on_surface_variant"]};'>Selecciona los roles para comparar salarios promedio y mediana.</p>",
         unsafe_allow_html=True,
     )
-    roles_disponibles = [
+    roles_disponibles = [  # Lista de roles disponibles para filtrar
         "Desarrollo de Software", "Analítica de Datos", "Ciencia de Datos",
         "Ingeniería de Datos", "Inteligencia Artificial", "Machine Learning", "Deep Learning",
     ]
-    roles_sel = st.multiselect(
-        "Roles a comparar",
-        options=roles_disponibles,
-        default=roles_disponibles[:3],
-        key="roles_salary_chart",
+    roles_sel = st.multiselect(  # Multiselect de roles
+        "Roles a comparar",  # Label
+        options=roles_disponibles,  # Opciones disponibles
+        default=roles_disponibles[:3],  # Por defecto: primeros 3 roles
+        key="roles_salary_chart",  # Key única
     )
-    if roles_sel:
-        df_roles = df_filtrada[df_filtrada["role_categoria"].isin(roles_sel)] if "role_categoria" in df_filtrada.columns else df_filtrada
-        st.plotly_chart(salary_by_role(df_filtrada, roles_sel), use_container_width=True)
-        st.caption("Promedio (barra) y mediana (diamante) salarial por rol. La mediana reduce el impacto de valores extremos.")
+    if roles_sel:  # Si hay roles seleccionados
+        df_roles = df_filtrada[df_filtrada["role_categoria"].isin(roles_sel)] if "role_categoria" in df_filtrada.columns else df_filtrada  # Filtra por roles
+        st.plotly_chart(salary_by_role(df_filtrada, roles_sel), use_container_width=True)  # Muestra gráfico de salario por rol
+        st.caption("Promedio (barra) y mediana (diamante) salarial por rol. La mediana reduce el impacto de valores extremos.")  # Pie de gráfico
     else:
         st.info("Selecciona al menos un rol para ver la gráfica.")
 
 
 def render_prediction(cfg, scraper, cleaner, repo, model):
-    c = DARK_COLORS
-    accent = "#4A90E2"
+    """Renderiza la página de predicción salarial con formulario de perfil y resultado."""
+    c = DARK_COLORS  # Paleta de colores oscuros
+    accent = "#4A90E2"  # Color de acento azul
 
-    scraper_name = type(scraper).__name__
-    from src.utils.environment import is_streamlit_cloud
-    on_cloud = is_streamlit_cloud()
+    scraper_name = type(scraper).__name__  # Nombre de la clase del scraper
+    from src.utils.environment import is_streamlit_cloud  # Importa verificación de Streamlit Cloud
+    on_cloud = is_streamlit_cloud()  # Verifica si está en Streamlit Cloud
 
-    if hasattr(scraper, "get_source_stats"):
-        stats = scraper.get_source_stats()
-        sources = stats.get("sources", [])
-        scraper_label = f"Multi-fuente ({', '.join(sources)})"
-    else:
-        scraper_label = {
+    if hasattr(scraper, "get_source_stats"):  # Si el scraper tiene estadísticas
+        stats = scraper.get_source_stats()  # Obtiene estadísticas
+        sources = stats.get("sources", [])  # Lista de fuentes
+        scraper_label = f"Multi-fuente ({', '.join(sources)})"  # Etiqueta multi-fuente
+    else:  # Si no tiene estadísticas
+        scraper_label = {  # Mapa de nombres de scraper a etiquetas
             "PlaywrightScraper": "Playwright (navegador real)" if not on_cloud else "HTTP cloudscraper",
             "HttpScraper": "HTTP cloudscraper (bypass Cloudflare)",
             "ZenRowsScraper": "ZenRows API (Cloudflare bypass)",
-        }.get(scraper_name, scraper_name)
+        }.get(scraper_name, scraper_name)  # Obtiene etiqueta o usa nombre de clase
 
-    col_title, col_badge = st.columns([3, 1])
-    with col_title:
-        st.markdown(f"<h1 class='main-header'>🎯 Predice tu Salario</h1>", unsafe_allow_html=True)
-    with col_badge:
-        render_source_badge()
-    st.markdown(
+    col_title, col_badge = st.columns([3, 1])  # Divide en 2 columnas (título y badge)
+    with col_title:  # Columna del título
+        st.markdown(f"<h1 class='main-header'>🎯 Predice tu Salario</h1>", unsafe_allow_html=True)  # Título de la página
+    with col_badge:  # Columna del badge
+        render_source_badge()  # Muestra badge de fuente
+    st.markdown(  # Descripción de la página
         f"<p style='color:{c["on_surface_variant"]};'>Ingresa tu perfil para obtener una estimación "
         f"salarial basada en <strong>500+ ofertas reales</strong> de <strong>5 portales</strong> del mercado de Medellín.</p>",
     )
-    if hasattr(scraper, "get_source_stats"):
-        source_names = scraper.get_source_stats().get("sources", [])
-        source_display = " + ".join(source_names)
-        num_sources = len(source_names)
-        num_queries = len(cfg.SEARCH_QUERIES)
-    else:
-        source_display = "elempleo.com"
-        num_sources = 1
-        num_queries = len(cfg.SEARCH_QUERIES)
+    if hasattr(scraper, "get_source_stats"):  # Si el scraper tiene estadísticas
+        source_names = scraper.get_source_stats().get("sources", [])  # Nombres de fuentes
+        source_display = " + ".join(source_names)  # Joined para mostrar
+        num_sources = len(source_names)  # Cantidad de fuentes
+        num_queries = len(cfg.SEARCH_QUERIES)  # Cantidad de queries
+    else:  # Si no tiene estadísticas
+        source_display = "elempleo.com"  # Fuente por defecto
+        num_sources = 1  # Una fuente
+        num_queries = len(cfg.SEARCH_QUERIES)  # Cantidad de queries
     st.markdown(f"""<div style='background:#152031;border:1px solid {accent}40;border-radius:8px;padding:0.6rem 1rem;margin-bottom:1rem;font-size:0.8rem;'>
         <span style='color:{c["on_surface_variant"]};'>📡 Scraping via:</span> <strong style='color:{accent};'>{scraper_label}</strong>
         <span style='color:{c["on_surface_variant"]};margin-left:1rem;'>🌐 Fuentes:</span> <strong style='color:{accent};'>{source_display}</strong>
         <span style='color:{c["on_surface_variant"]};margin-left:1rem;'>🔍 Queries:</span> <strong style='color:{accent};'>{num_queries} búsquedas</strong>
         <span style='color:{c["on_surface_variant"]};margin-left:1rem;'>💰 Token:</span> <strong style='color:#2557CC;'>No requiere</strong>
-    </div>""", unsafe_allow_html=True)
+    </div>""", unsafe_allow_html=True)  # Barra de info de scraping
 
-    df = load_or_fetch_data(cfg, scraper, cleaner, repo)
-    if df is not None and not df.empty:
-        src_name = st.session_state.get("data_source", "Datos del sistema")
-        last_up = st.session_state.get("last_update")
-        last_up_str = last_up.strftime("%d/%m/%Y %H:%M") if last_up else "—"
-        total_records = len(df)
-        ciudades_count = df["ciudad"].nunique() if "ciudad" in df.columns else 0
+    df = load_or_fetch_data(cfg, scraper, cleaner, repo)  # Carga datos del mercado
+    if df is not None and not df.empty:  # Si hay datos
+        src_name = st.session_state.get("data_source", "Datos del sistema")  # Nombre de fuente
+        last_up = st.session_state.get("last_update")  # Última actualización
+        last_up_str = last_up.strftime("%d/%m/%Y %H:%M") if last_up else "—"  # Formatea fecha
+        total_records = len(df)  # Total de registros
+        ciudades_count = df["ciudad"].nunique() if "ciudad" in df.columns else 0  # Cantidad de ciudades
         st.markdown(f"""<div class='feature-card' style='padding:0.8rem 1.2rem;margin-bottom:1rem;border-left:4px solid {accent};'>
             <div style='display:flex;gap:2rem;flex-wrap:wrap;'>
                 <div><span style='font-size:0.75rem;color:{c["on_surface_variant"]};'>📡 Fuente:</span> <strong style='font-size:0.85rem;'>{src_name}</strong></div>
@@ -1553,104 +1656,104 @@ def render_prediction(cfg, scraper, cleaner, repo, model):
                 <div><span style='font-size:0.75rem;color:{c["on_surface_variant"]};'>📊 Registros:</span> <strong style='font-size:0.85rem;'>{total_records} ofertas</strong></div>
                 <div><span style='font-size:0.75rem;color:{c["on_surface_variant"]};'>🏙️ Municipios:</span> <strong style='font-size:0.85rem;'>{ciudades_count} del AMVA</strong></div>
             </div>
-        </div>""", unsafe_allow_html=True)
-    st.divider()
-    if df is None or df.empty:
-        st.error("### Sin datos disponibles")
-        st.info("Ejecuta el scraping desde la página de **📊 Análisis del Mercado** primero.")
-        return
+        </div>""", unsafe_allow_html=True)  # Tarjeta de info de datos
+    st.divider()  # Línea divisora
+    if df is None or df.empty:  # Si no hay datos
+        st.error("### Sin datos disponibles")  # Muestra error
+        st.info("Ejecuta el scraping desde la página de **📊 Análisis del Mercado** primero.")  # Muestra info
+        return  # Sale de la función
 
-    if not model.is_trained:
-        with st.spinner("Entrenando modelo de predicción..."):
-            feature_cols = ["experiencia_requerida", "cargo_nivel_cod", "modalidad_cod", "skills_str",
+    if not model.is_trained:  # Si el modelo no está entrenado
+        with st.spinner("Entrenando modelo de predicción..."):  # Muestra spinner
+            feature_cols = ["experiencia_requerida", "cargo_nivel_cod", "modalidad_cod", "skills_str",  # Columnas de features
                             "role_categoria", "num_skills", "tipo_contrato_cod"]
-            for col in feature_cols:
-                if col not in df.columns:
-                    if col == "role_categoria":
-                        from src.utils.validators import identify_role_category
-                        df["role_categoria"] = df.apply(
+            for col in feature_cols:  # Itera cada feature
+                if col not in df.columns:  # Si falta la columna
+                    if col == "role_categoria":  # Si es role_categoria
+                        from src.utils.validators import identify_role_category  # Importa identificador
+                        df["role_categoria"] = df.apply(  # Identifica categoría de rol
                             lambda r: identify_role_category(r.get("titulo", ""), r.get("descripcion", "")), axis=1
                         )
-                    elif col == "num_skills":
-                        df["num_skills"] = df["skills_str"].apply(lambda x: len(x.split(",")) if x else 0)
-                    elif col == "tipo_contrato_cod":
-                        df["tipo_contrato_cod"] = 1
-            X = df[feature_cols].copy()
-            y = df["salario_promedio"]
-            if len(X) > 20:
-                model.train(X, y)
-                model.save(str(cfg.MODEL_PATH))
+                    elif col == "num_skills":  # Si es num_skills
+                        df["num_skills"] = df["skills_str"].apply(lambda x: len(x.split(",")) if x else 0)  # Cuenta skills
+                    elif col == "tipo_contrato_cod":  # Si es tipo_contrato_cod
+                        df["tipo_contrato_cod"] = 1  # Valor por defecto
+            X = df[feature_cols].copy()  # Matrix de features
+            y = df["salario_promedio"]  # Vector target
+            if len(X) > 20:  # Si hay suficientes datos
+                model.train(X, y)  # Entrena el modelo
+                model.save(str(cfg.MODEL_PATH))  # Guarda el modelo
 
-    col1, col2 = st.columns([1, 1])
+    col1, col2 = st.columns([1, 1])  # Divide en 2 columnas
 
-    with col1:
-        st.markdown("### 👤 Tu Perfil Profesional")
-        nivel = st.selectbox(
-            "Nivel del cargo",
-            options=["tecnico", "tecnologo", "ingeniero", "senior"],
-            format_func=lambda x: {
+    with col1:  # Columna izquierda: Formulario de perfil
+        st.markdown("### 👤 Tu Perfil Profesional")  # Título del formulario
+        nivel = st.selectbox(  # Selector de nivel de cargo
+            "Nivel del cargo",  # Label
+            options=["tecnico", "tecnologo", "ingeniero", "senior"],  # Opciones
+            format_func=lambda x: {  # Formato de display
                 "tecnico": "🧑‍🔧 Técnico en Sistemas",
                 "tecnologo": "👨‍💻 Tecnólogo en Sistemas",
                 "ingeniero": "👨‍🔬 Ingeniero de Sistemas/Software",
                 "senior": "🏆 Senior / Líder / Arquitecto",
             }[x],
         )
-        experiencia = st.slider("Años de experiencia", 0, 20, 2)
-        modalidad = st.selectbox(
-            "Modalidad preferida",
-            options=["presencial", "hibrido", "remoto"],
-            format_func=lambda x: {
+        experiencia = st.slider("Años de experiencia", 0, 20, 2)  # Slider de experiencia (0-20, default 2)
+        modalidad = st.selectbox(  # Selector de modalidad
+            "Modalidad preferida",  # Label
+            options=["presencial", "hibrido", "remoto"],  # Opciones
+            format_func=lambda x: {  # Formato de display
                 "presencial": "🏢 Presencial",
                 "hibrido": "🔄 Híbrido",
                 "remoto": "🏠 Remoto",
             }[x],
         )
-        skills_disponibles = sorted(SKILL_KEYWORDS.keys())
-        skills_selected = st.multiselect(
-            "Tus skills técnicas",
-            options=skills_disponibles,
-            default=["Python", "SQL", "Git"],
+        skills_disponibles = sorted(SKILL_KEYWORDS.keys())  # Lista de skills ordenadas alfabéticamente
+        skills_selected = st.multiselect(  # Multiselect de skills
+            "Tus skills técnicas",  # Label
+            options=skills_disponibles,  # Opciones
+            default=["Python", "SQL", "Git"],  # Por defecto: Python, SQL, Git
         )
 
-    with col2:
-        st.markdown("### 📊 Resultado de Predicción")
-        level_map = {"tecnico": 0, "tecnologo": 1, "ingeniero": 2, "senior": 3}
-        modal_map = {"presencial": 0, "hibrido": 1, "remoto": 2}
+    with col2:  # Columna derecha: Resultado de predicción
+        st.markdown("### 📊 Resultado de Predicción")  # Título de resultado
+        level_map = {"tecnico": 0, "tecnologo": 1, "ingeniero": 2, "senior": 3}  # Mapeo de nivel a código
+        modal_map = {"presencial": 0, "hibrido": 1, "remoto": 2}  # Mapeo de modalidad a código
 
-        predict_btn = st.button("🔮 Predecir mi salario", type="primary", use_container_width=True)
+        predict_btn = st.button("🔮 Predecir mi salario", type="primary", use_container_width=True)  # Botón de predicción
         
-        if predict_btn:
-            logger.info(f"Prediction requested: nivel={nivel}, exp={experiencia}, modal={modalidad}, skills={skills_selected}")
-            if not skills_selected:
-                st.warning("Selecciona al menos una skill técnica.")
-            elif not model.is_trained:
-                st.error("El modelo no está entrenado. Ve a la sección de Análisis del Mercado primero.")
-            else:
-                skills_str = ", ".join(skills_selected)
-                from src.utils.validators import identify_role_category
-                role_cat = identify_role_category(skills_str, skills_str)
-                input_df = pd.DataFrame([{
-                    "experiencia_requerida": experiencia,
-                    "cargo_nivel_cod": level_map[nivel],
-                    "modalidad_cod": modal_map[modalidad],
-                    "skills_str": skills_str,
-                    "role_categoria": role_cat,
-                    "num_skills": len(skills_selected),
-                    "tipo_contrato_cod": 0,
+        if predict_btn:  # Si se hizo click en predecir
+            logger.info(f"Prediction requested: nivel={nivel}, exp={experiencia}, modal={modalidad}, skills={skills_selected}")  # Log de predicción
+            if not skills_selected:  # Si no hay skills seleccionadas
+                st.warning("Selecciona al menos una skill técnica.")  # Muestra advertencia
+            elif not model.is_trained:  # Si el modelo no está entrenado
+                st.error("El modelo no está entrenado. Ve a la sección de Análisis del Mercado primero.")  # Muestra error
+            else:  # Si hay skills y modelo entrenado
+                skills_str = ", ".join(skills_selected)  # Convierte skills a string
+                from src.utils.validators import identify_role_category  # Importa identificador
+                role_cat = identify_role_category(skills_str, skills_str)  # Identifica categoría de rol
+                input_df = pd.DataFrame([{  # Crea DataFrame de entrada
+                    "experiencia_requerida": experiencia,  # Años de experiencia
+                    "cargo_nivel_cod": level_map[nivel],  # Código de nivel
+                    "modalidad_cod": modal_map[modalidad],  # Código de modalidad
+                    "skills_str": skills_str,  # Skills como string
+                    "role_categoria": role_cat,  # Categoría de rol
+                    "num_skills": len(skills_selected),  # Cantidad de skills
+                    "tipo_contrato_cod": 0,  # Tipo de contrato (default)
                 }])
-                result = model.predict(input_df)
-                st.session_state.prediction_made = True
-                st.session_state.last_prediction = result
-                st.session_state.last_input = {
+                result = model.predict(input_df)  # Ejecuta predicción
+                st.session_state.prediction_made = True  # Marca predicción realizada
+                st.session_state.last_prediction = result  # Guarda resultado
+                st.session_state.last_input = {  # Guarda entrada
                     "nivel": nivel,
                     "experiencia": experiencia,
                     "modalidad": modalidad,
                     "skills": skills_selected,
                 }
 
-        if st.session_state.get("prediction_made"):
-            res = st.session_state.last_prediction
-            st.markdown(
+        if st.session_state.get("prediction_made"):  # Si ya se hizo una predicción
+            res = st.session_state.last_prediction  # Obtiene resultado
+            st.markdown(  # Muestra tarjeta de predicción
                 f"""
                 <div class='prediction-card'>
                     <p style='font-size:1rem;opacity:0.9;'>Salario Mensual Estimado</p>
@@ -1663,42 +1766,42 @@ def render_prediction(cfg, scraper, cleaner, repo, model):
                 """,
                 unsafe_allow_html=True,
             )
-            avg_market = df["salario_promedio"].mean()
-            diff = res["salario_estimado"] - avg_market
-            pct = (diff / avg_market) * 100
-            if pct > 5:
-                st.success(f"📈 Tu salario estimado está **{pct:+.1f}%** sobre el promedio del mercado (${avg_market:,.0f} COP)")
-            elif pct < -5:
-                st.info(f"📉 Tu salario estimado está **{pct:+.1f}%** bajo el promedio del mercado (${avg_market:,.0f} COP)")
-            else:
-                st.info(f"📊 Tu salario estimado está **cerca del promedio** del mercado (${avg_market:,.0f} COP)")
+            avg_market = df["salario_promedio"].mean()  # Promedio del mercado
+            diff = res["salario_estimado"] - avg_market  # Diferencia con el mercado
+            pct = (diff / avg_market) * 100  # Porcentaje de diferencia
+            if pct > 5:  # Si está por encima del promedio
+                st.success(f"📈 Tu salario estimado está **{pct:+.1f}%** sobre el promedio del mercado (${avg_market:,.0f} COP)")  # Mensaje positivo
+            elif pct < -5:  # Si está por debajo del promedio
+                st.info(f"📉 Tu salario estimado está **{pct:+.1f}%** bajo el promedio del mercado (${avg_market:,.0f} COP)")  # Mensaje informativo
+            else:  # Si está cerca del promedio
+                st.info(f"📊 Tu salario estimado está **cerca del promedio** del mercado (${avg_market:,.0f} COP)")  # Mensaje neutro
 
-            st.caption(
+            st.caption(  # Advertencia de predicción
                 "⚠️ Esta predicción es una estimación basada en datos históricos. "
                 "Los salarios reales pueden variar según la empresa, beneficios adicionales "
                 "y condiciones del mercado. Modelo entrenado con datos de "
                 f"{datetime.date.today().strftime('%B %Y')}."
             )
 
-            # Show model metrics
-            metrics = model.get_metrics()
-            cv = model.get_cv_scores()
-            if metrics:
-                st.markdown("#### 📈 Métricas del Modelo")
-                m1, m2, m3 = st.columns(3)
-                m1.metric("R²", f"{metrics.get('R2', 0):.3f}")
-                m2.metric("MAE", f"${metrics.get('MAE', 0):,.0f}")
-                m3.metric("RMSE", f"${metrics.get('RMSE', 0):,.0f}")
-                if cv and cv.get("n_folds", 0) > 0:
-                    st.caption(f"Cross-validation: R² = {cv['R2_mean']:.3f} ± {cv['R2_std']:.3f} ({cv['n_folds']} folds)")
+            # Show model metrics  # Muestra métricas del modelo
+            metrics = model.get_metrics()  # Obtiene métricas
+            cv = model.get_cv_scores()  # Obtiene scores de cross-validation
+            if metrics:  # Si hay métricas
+                st.markdown("#### 📈 Métricas del Modelo")  # Título de métricas
+                m1, m2, m3 = st.columns(3)  # 3 columnas de métricas
+                m1.metric("R²", f"{metrics.get('R2', 0):.3f}")  # R² score
+                m2.metric("MAE", f"${metrics.get('MAE', 0):,.0f}")  # Mean Absolute Error
+                m3.metric("RMSE", f"${metrics.get('RMSE', 0):,.0f}")  # Root Mean Squared Error
+                if cv and cv.get("n_folds", 0) > 0:  # Si hay cross-validation
+                    st.caption(f"Cross-validation: R² = {cv['R2_mean']:.3f} ± {cv['R2_std']:.3f} ({cv['n_folds']} folds)")  # Info de CV
 
-            # Show feature importance
-            top_features = model.get_top_features(8)
-            if top_features:
-                with st.expander("🔍 Top Features del Modelo", expanded=False):
-                    for feat_name, importance in top_features:
-                        bar_width = int(importance * 100 / max(f[1] for f in top_features))
-                        st.markdown(
+            # Show feature importance  # Muestra importancia de features
+            top_features = model.get_top_features(8)  # Top 8 features
+            if top_features:  # Si hay features
+                with st.expander("🔍 Top Features del Modelo", expanded=False):  # Expander de features
+                    for feat_name, importance in top_features:  # Itera cada feature
+                        bar_width = int(importance * 100 / max(f[1] for f in top_features))  # Calcula ancho de barra
+                        st.markdown(  # Muestra barra de importancia
                             f"<div style='display:flex;align-items:center;gap:8px;margin-bottom:4px;'>"
                             f"<span style='width:140px;font-size:0.8rem;color:{c["on_surface_variant"]};'>{feat_name}</span>"
                             f"<div style='flex:1;background:#1a2332;border-radius:4px;height:8px;'>"
@@ -1752,105 +1855,106 @@ def render_prediction(cfg, scraper, cleaner, repo, model):
 
 
 def render_raw_data(cfg, scraper, cleaner, repo):
-    c = DARK_COLORS
-    accent = "#4A90E2"
+    """Renderiza la página de datos crudos con filtros, tabla y opciones de descarga."""
+    c = DARK_COLORS  # Paleta de colores oscuros
+    accent = "#4A90E2"  # Color de acento azul
 
-    scraper_name = type(scraper).__name__
-    from src.utils.environment import is_streamlit_cloud
-    on_cloud = is_streamlit_cloud()
+    scraper_name = type(scraper).__name__  # Nombre de la clase del scraper
+    from src.utils.environment import is_streamlit_cloud  # Importa verificación de Streamlit Cloud
+    on_cloud = is_streamlit_cloud()  # Verifica si está en Streamlit Cloud
 
-    if hasattr(scraper, "get_source_stats"):
-        stats = scraper.get_source_stats()
-        sources = stats.get("sources", [])
-        scraper_label = f"Multi-fuente ({', '.join(sources)})"
-    else:
-        scraper_label = {
+    if hasattr(scraper, "get_source_stats"):  # Si el scraper tiene estadísticas
+        stats = scraper.get_source_stats()  # Obtiene estadísticas
+        sources = stats.get("sources", [])  # Lista de fuentes
+        scraper_label = f"Multi-fuente ({', '.join(sources)})"  # Etiqueta multi-fuente
+    else:  # Si no tiene estadísticas
+        scraper_label = {  # Mapa de nombres de scraper a etiquetas
             "PlaywrightScraper": "Playwright (navegador real)" if not on_cloud else "HTTP cloudscraper",
             "HttpScraper": "HTTP cloudscraper (bypass Cloudflare)",
             "ZenRowsScraper": "ZenRows API (Cloudflare bypass)",
-        }.get(scraper_name, scraper_name)
+        }.get(scraper_name, scraper_name)  # Obtiene etiqueta o usa nombre de clase
 
-    col_title, col_badge = st.columns([3, 1])
-    with col_title:
-        st.markdown(f"<h1 class='main-header'>📋 Datos del Mercado</h1>", unsafe_allow_html=True)
-    with col_badge:
-        render_source_badge()
-    st.markdown(
+    col_title, col_badge = st.columns([3, 1])  # Divide en 2 columnas
+    with col_title:  # Columna del título
+        st.markdown(f"<h1 class='main-header'>📋 Datos del Mercado</h1>", unsafe_allow_html=True)  # Título de la página
+    with col_badge:  # Columna del badge
+        render_source_badge()  # Muestra badge de fuente
+    st.markdown(  # Descripción de la página
         f"<p style='color:{c["on_surface_variant"]};'>Explora, filtra y descarga los datos reales de ofertas laborales obtenidos de múltiples portales via {scraper_label}.</p>",
     )
-    # Build source display from stats
-    if hasattr(scraper, "get_source_stats"):
-        source_names = scraper.get_source_stats().get("sources", [])
-        source_display = " + ".join(source_names)
-        num_sources = len(source_names)
-        num_queries = len(cfg.SEARCH_QUERIES)
-    else:
-        source_display = "elempleo.com"
-        num_sources = 1
-        num_queries = len(cfg.SEARCH_QUERIES)
+    # Build source display from stats  # Construye etiqueta de fuente
+    if hasattr(scraper, "get_source_stats"):  # Si el scraper tiene estadísticas
+        source_names = scraper.get_source_stats().get("sources", [])  # Nombres de fuentes
+        source_display = " + ".join(source_names)  # Joined para mostrar
+        num_sources = len(source_names)  # Cantidad de fuentes
+        num_queries = len(cfg.SEARCH_QUERIES)  # Cantidad de queries
+    else:  # Si no tiene estadísticas
+        source_display = "elempleo.com"  # Fuente por defecto
+        num_sources = 1  # Una fuente
+        num_queries = len(cfg.SEARCH_QUERIES)  # Cantidad de queries
     st.markdown(f"""<div style='background:#152031;border:1px solid {accent}40;border-radius:8px;padding:0.6rem 1rem;margin-bottom:1rem;font-size:0.8rem;'>
         <span style='color:{c["on_surface_variant"]};'>📡 Scraping via:</span> <strong style='color:{accent};'>{scraper_label}</strong>
         <span style='color:{c["on_surface_variant"]};margin-left:1rem;'>🌐 Fuentes:</span> <strong style='color:{accent};'>{source_display}</strong>
         <span style='color:{c["on_surface_variant"]};margin-left:1rem;'>🔍 Queries:</span> <strong style='color:{accent};'>{num_queries} búsquedas</strong>
         <span style='color:{c["on_surface_variant"]};margin-left:1rem;'>💰 Token:</span> <strong style='color:#2557CC;'>No requiere</strong>
-    </div>""", unsafe_allow_html=True)
-    st.divider()
+    </div>""", unsafe_allow_html=True)  # Barra de info de scraping
+    st.divider()  # Línea divisora
 
-    df = load_or_fetch_data(cfg, scraper, cleaner, repo)
-    if df is None or df.empty:
-        st.error("### Sin datos disponibles")
-        st.info("Ejecuta el scraping desde la página de **📊 Análisis del Mercado** primero.")
-        return
+    df = load_or_fetch_data(cfg, scraper, cleaner, repo)  # Carga datos del mercado
+    if df is None or df.empty:  # Si no hay datos
+        st.error("### Sin datos disponibles")  # Muestra error
+        st.info("Ejecuta el scraping desde la página de **📊 Análisis del Mercado** primero.")  # Muestra info
+        return  # Sale de la función
 
-    # Filters
-    col_f1, col_f2, col_f3 = st.columns([2, 1, 1])
-    with col_f1:
-        search = st.text_input("🔍 Buscar por título, empresa o skill", "")
-    with col_f2:
-        ciudad_filter = st.multiselect(
-            "Municipio",
-            options=sorted(df["ciudad"].unique()) if "ciudad" in df.columns else [],
-            default=[],
-            placeholder="Todos",
+    # Filters  # Filtros de búsqueda
+    col_f1, col_f2, col_f3 = st.columns([2, 1, 1])  # 3 columnas de filtros
+    with col_f1:  # Filtro de búsqueda por texto
+        search = st.text_input("🔍 Buscar por título, empresa o skill", "")  # Input de búsqueda
+    with col_f2:  # Filtro de municipio
+        ciudad_filter = st.multiselect(  # Multiselect de municipios
+            "Municipio",  # Label
+            options=sorted(df["ciudad"].unique()) if "ciudad" in df.columns else [],  # Opciones únicas
+            default=[],  # Por defecto: todos
+            placeholder="Todos",  # Placeholder
         )
-    with col_f3:
-        nivel_filter = st.multiselect(
-            "Nivel",
-            options=df["cargo_nivel"].unique() if "cargo_nivel" in df.columns else [],
-            default=[],
-            placeholder="Todos",
+    with col_f3:  # Filtro de nivel
+        nivel_filter = st.multiselect(  # Multiselect de niveles
+            "Nivel",  # Label
+            options=df["cargo_nivel"].unique() if "cargo_nivel" in df.columns else [],  # Opciones únicas
+            default=[],  # Por defecto: todos
+            placeholder="Todos",  # Placeholder
         )
 
-    filtered = df.copy()
-    if search:
-        mask = filtered.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)
-        filtered = filtered[mask]
-    if ciudad_filter:
-        filtered = filtered[filtered["ciudad"].isin(ciudad_filter)]
-    if nivel_filter:
-        filtered = filtered[filtered["cargo_nivel"].isin(nivel_filter)]
+    filtered = df.copy()  # Copia del dataframe para filtrar
+    if search:  # Si hay texto de búsqueda
+        mask = filtered.astype(str).apply(lambda x: x.str.contains(search, case=False, na=False)).any(axis=1)  # Máscara de búsqueda
+        filtered = filtered[mask]  # Filtra por búsqueda
+    if ciudad_filter:  # Si hay filtro de municipio
+        filtered = filtered[filtered["ciudad"].isin(ciudad_filter)]  # Filtra por municipios
+    if nivel_filter:  # Si hay filtro de nivel
+        filtered = filtered[filtered["cargo_nivel"].isin(nivel_filter)]  # Filtra por niveles
 
-    display_cols = [
+    display_cols = [  # Columnas a mostrar en la tabla
         "titulo", "empresa", "ciudad", "salario_minimo", "salario_maximo",
         "salario_promedio", "experiencia_requerida", "cargo_nivel",
         "modalidad_clean", "skills_str", "fecha_publicacion",
     ]
-    display_cols = [c for c in display_cols if c in filtered.columns]
-    st.dataframe(filtered[display_cols], use_container_width=True, height=400)
+    display_cols = [c for c in display_cols if c in filtered.columns]  # Filtra columnas existentes
+    st.dataframe(filtered[display_cols], use_container_width=True, height=400)  # Muestra tabla de datos
 
-    col_a, col_b = st.columns(2)
-    with col_a:
-        csv = filtered.to_csv(index=False, encoding="utf-8")
-        st.download_button(
-            label="📥 Descargar CSV filtrado",
-            data=csv,
-            file_name=f"ofertas_medellin_{datetime.date.today().isoformat()}.csv",
-            mime="text/csv",
-            use_container_width=True,
+    col_a, col_b = st.columns(2)  # 2 columnas para botones de descarga
+    with col_a:  # Columna de descarga CSV
+        csv = filtered.to_csv(index=False, encoding="utf-8")  # Convierte a CSV
+        st.download_button(  # Botón de descarga CSV
+            label="📥 Descargar CSV filtrado",  # Label
+            data=csv,  # Datos CSV
+            file_name=f"ofertas_medellin_{datetime.date.today().isoformat()}.csv",  # Nombre de archivo
+            mime="text/csv",  # Tipo MIME
+            use_container_width=True,  # Ancho completo
         )
-    with col_b:
-        json_data = filtered.to_json(orient="records", force_ascii=False)
-        st.download_button(
+    with col_b:  # Columna de descarga JSON
+        json_data = filtered.to_json(orient="records", force_ascii=False)  # Convierte a JSON
+        st.download_button(  # Botón de descarga JSON
             label="📥 Descargar JSON filtrado",
             data=json_data,
             file_name=f"ofertas_medellin_{datetime.date.today().isoformat()}.json",
