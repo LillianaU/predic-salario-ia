@@ -35,11 +35,11 @@ Sistema de prediccion salarial y analisis de empleabilidad para tecnicos, tecnol
 
 ## 🎬 Video Presentacion
 
-En la carpeta `video_presentacion/` se encuentra el video de presentacion del proyecto:
+Mira la presentacion del proyecto en YouTube:
 
-**Archivo:** `video_presentacion/presentacion.mp4`
+[![Video Presentacion PredicSalario IA](https://img.youtube.com/vi/Aao7A6OE_Zg/maxresdefault.jpg)](https://youtu.be/Aao7A6OE_Zg)
 
-Puedes verlo directamente en GitHub/GitLab navegando a la carpeta `video_presentacion` y haciendo clic en el archivo `presentacion.mp4`, o descargandolo para verlo localmente.
+Haz clic en la imagen para ver el video en YouTube.
 
 ---
 

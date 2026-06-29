@@ -43,8 +43,3 @@ htmlcov/
 .coverage
 .coverage.*
 coverage.xml
-
-# Video (too large for Git - use Git LFS or external hosting)
-video_presentacion/*.mp4
-video_presentacion/*.avi
-video_presentacion/*.mov
