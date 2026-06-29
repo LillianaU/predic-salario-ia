@@ -1,0 +1,39 @@
+{
+  "fecha": "2026-06-23T23:55:24.906216",
+  "resultados": [
+    {
+      "api": "Playwright",
+      "estado": "OK",
+      "registros": 60,
+      "fuente": "elempleo.com"
+    },
+    {
+      "api": "HTTP cloudscraper",
+      "estado": "OK",
+      "registros": 66,
+      "fuente": "elempleo.com"
+    },
+    {
+      "api": "Wikipedia Population",
+      "estado": "HTTP 403",
+      "registros": 0
+    },
+    {
+      "api": "Google News RSS",
+      "estado": "OK",
+      "registros": 6,
+      "fuente": "Google News"
+    },
+    {
+      "api": "Groq API",
+      "estado": "SIN KEY",
+      "registros": 0
+    },
+    {
+      "api": "Datos embebidos",
+      "estado": "OK",
+      "registros": 46,
+      "fuente": "Hardcoded"
+    }
+  ]
+}
