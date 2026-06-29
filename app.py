@@ -43,36 +43,44 @@ except Exception:
     # Si la configuración falla (ej: .env ausente), usa logger por defecto sin archivo
     logger = get_logger("app")
 
+# Paleta de colores oscuros inspirada en Material Design para toda la aplicacion
+# Se usa en todas las funciones render_* para mantener consistencia visual
 DARK_COLORS = {
-    "bg": "#0A1F50",
-    "surface": "#0F2860",
-    "surface_low": "#0D2248",
-    "surface_high": "#1B3F8B",
-    "surface_bright": "#2557CC",
-    "primary": "#4A90E2",
-    "primary_container": "#2557CC",
-    "secondary": "#6AABF0",
-    "on_surface": "#FFFFFF",
-    "on_surface_variant": "#B0C4DE",
-    "outline": "#4A6FA5",
-    "outline_variant": "#1B3F8B",
-    "error": "#fca5a5",
-    "error_container": "#991b1b",
-    "glass": "rgba(10,31,80,0.7)",
-    "glass_border": "rgba(74,144,226,0.25)",
-    "card": "#1B3F8B",
+    "bg": "#0A1F50",  # Fondo principal de la pagina
+    "surface": "#0F2860",  # Superficie de cards y paneles
+    "surface_low": "#0D2248",  # Superficie baja (menos prominente)
+    "surface_high": "#1B3F8B",  # Superficie alta (mas prominente)
+    "surface_bright": "#2557CC",  # Superficie brillante (acentos)
+    "primary": "#4A90E2",  # Color primario azul
+    "primary_container": "#2557CC",  # Contenedor primario
+    "secondary": "#6AABF0",  # Color secundario azul claro
+    "on_surface": "#FFFFFF",  # Texto sobre superficies oscuras
+    "on_surface_variant": "#B0C4DE",  # Texto variante sobre superficies
+    "outline": "#4A6FA5",  # Bordes y lineas
+    "outline_variant": "#1B3F8B",  # Bordes variantes
+    "error": "#fca5a5",  # Color de error (rojo claro)
+    "error_container": "#991b1b",  # Contenedor de error
+    "glass": "rgba(10,31,80,0.7)",  # Fondo de vidrio (glassmorphism)
+    "glass_border": "rgba(74,144,226,0.25)",  # Borde de vidrio
+    "card": "#1B3F8B",  # Color de tarjetas
 }
 
+# Municipios del Area Metropolitana del Valle de Aburra (AMVA) agrupados por region
+# Se usa en el sidebar como filtro de ubicacion para las ofertas laborales
 MEDELLIN_METRO = {
-    "Norte": ["Barbosa", "Girardota", "Copacabana", "Donmatías", "Santa Rosa de Osos", "San Pedro de los Milagros"],
-    "Centro": ["Bello", "Medellín", "Itagüí", "San Cristóbal", "La Ceja del Tambo", "Carmen de Viboral"],
-    "Sur": ["Envigado", "Sabaneta", "La Estrella", "Caldas", "Rionegro", "Marinilla", "Guatapé"],
+    "Norte": ["Barbosa", "Girardota", "Copacabana", "Donmatias", "Santa Rosa de Osos", "San Pedro de los Milagros"],  # Region norte del AMVA
+    "Centro": ["Bello", "Medellin", "Itagui", "San Cristobal", "La Ceja del Tambo", "Carmen de Viboral"],  # Region centro del AMVA
+    "Sur": ["Envigado", "Sabaneta", "La Estrella", "Caldas", "Rionegro", "Marinilla", "Guatape"],  # Region sur del AMVA
 }
 
 
 def render_theme_css():
-    # Genera y aplica CSS personalizado para el tema oscuro de la aplicación
-    # Incluye: glassmorphism, animaciones, burbujas flotantes, responsive media queries
+    """Genera y aplica el CSS personalizado para el tema oscuro de la aplicacion.
+
+    Incluye estilos para: glassmorphism, animaciones de burbujas flotantes,
+    botones con gradiente, tarjetas con efecto vidrio, sidebar, metricas,
+    y media queries para responsive (desktop, tablet, movil).
+    """
     c = DARK_COLORS
     accent = "#4A90E2"
     accent2 = "#2557CC"
@@ -683,64 +691,24 @@ def main():
 
 
 def render_landing(c, accent, cfg):
-    """Renderiza la página de inicio (landing page) con información general del sistema."""
-    from src.data.population import get_population_data, get_population_table_html  # Datos de población del AMVA
+    """Renderiza la pagina de inicio (landing page) con informacion general del sistema.
+
+    Args:
+        c: dict de colores del tema oscuro (DARK_COLORS)
+        accent: string con color de acento azul (#4A90E2)
+        cfg: instancia de Config con constantes del proyecto
+    """
+    from src.data.population import get_population_data, get_population_table_html  # Datos de poblacion del AMVA
     from src.utils.news import fetch_news  # Noticias de empleo TI
 
     @st.cache_data(ttl=3600)  # Cachea por 1 hora (3600 segundos)
     def _fetch_news_cached(max_items):
-        return fetch_news(max_items)  # Obtiene noticias y cachea
+        """Obtiene y cachea noticias del mercado laboral TI.
 
-    shield_logo = """
-    <svg width="100%" viewBox="0 0 680 620" role="img" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-            <style>
-                .f-white { fill: #FFFFFF; }
-                .f-blue { fill: #1B3F8B; }
-                .f-blue2 { fill: #2557CC; }
-                .f-blue3 { fill: #0A1F50; }
-                .f-accent { fill: #4A90E2; }
-            </style>
-        </defs>
-        <path d="M240,80 L440,80 L440,340 Q440,420 340,470 Q240,420 240,340 Z" fill="#0A1F50"/>
-        <path d="M250,90 L430,90 L430,338 Q430,410 340,458 Q250,410 250,338 Z" fill="#1B3F8B"/>
-        <path d="M258,98 L422,98 L422,336 Q422,404 340,450 Q258,404 258,336 Z" fill="#2557CC"/>
-        <line x1="258" y1="260" x2="422" y2="260" stroke="#FFFFFF" stroke-width="2" opacity="0.4"/>
-        <line x1="340" y1="98" x2="340" y2="310" stroke="#FFFFFF" stroke-width="2" opacity="0.4"/>
-        <circle cx="295" cy="165" r="10" fill="#FFFFFF" opacity="0.95"/>
-        <circle cx="320" cy="140" r="7" fill="#FFFFFF" opacity="0.7"/>
-        <circle cx="315" cy="195" r="6" fill="#FFFFFF" opacity="0.6"/>
-        <line x1="295" y1="165" x2="320" y2="140" stroke="#FFFFFF" stroke-width="2" opacity="0.7"/>
-        <line x1="295" y1="165" x2="315" y2="195" stroke="#FFFFFF" stroke-width="2" opacity="0.6"/>
-        <line x1="320" y1="140" x2="315" y2="195" stroke="#FFFFFF" stroke-width="1.5" opacity="0.4"/>
-        <circle cx="275" cy="145" r="5" fill="#4A90E2"/>
-        <line x1="275" y1="145" x2="295" y2="165" stroke="#4A90E2" stroke-width="1.5"/>
-        <polyline points="360,200 375,170 390,185 408,148" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-        <circle cx="360" cy="200" r="3.5" fill="#4A90E2"/>
-        <circle cx="375" cy="170" r="3.5" fill="#4A90E2"/>
-        <circle cx="390" cy="185" r="3.5" fill="#4A90E2"/>
-        <circle cx="408" cy="148" r="3.5" fill="#FFFFFF"/>
-        <polyline points="404,138 408,128 412,138" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-        <text x="340" y="352" text-anchor="middle" font-family="'Helvetica Neue', Arial, sans-serif" font-size="52" font-weight="900" fill="#FFFFFF" opacity="0.95">$</text>
-        <line x1="290" y1="370" x2="335" y2="370" stroke="#FFFFFF" stroke-width="1.5" opacity="0.35"/>
-        <line x1="345" y1="370" x2="390" y2="370" stroke="#FFFFFF" stroke-width="1.5" opacity="0.35"/>
-        <path d="M258,400 L422,400 L422,336 Q422,404 340,450 Q258,404 258,336 L258,400 Z" fill="#0A1F50" opacity="0.7"/>
-        <rect x="302" y="50" width="76" height="30" rx="3" fill="#0A1F50"/>
-        <rect x="302" y="50" width="76" height="30" rx="3" fill="none" stroke="#FFFFFF" stroke-width="1.5" opacity="0.5"/>
-        <rect x="306" y="38" width="12" height="16" rx="2" fill="#0A1F50" stroke="#FFFFFF" stroke-width="1.2" opacity="0.8"/>
-        <rect x="324" y="30" width="12" height="24" rx="2" fill="#0A1F50" stroke="#FFFFFF" stroke-width="1.5"/>
-        <rect x="344" y="26" width="12" height="28" rx="2" fill="#0A1F50" stroke="#FFFFFF" stroke-width="1.5"/>
-        <rect x="364" y="30" width="12" height="24" rx="2" fill="#0A1F50" stroke="#FFFFFF" stroke-width="1.5"/>
-        <circle cx="330" cy="35" r="3" fill="#4A90E2"/>
-        <circle cx="350" cy="30" r="4" fill="#4A90E2"/>
-        <circle cx="370" cy="35" r="3" fill="#4A90E2"/>
-        <text x="340" y="520" text-anchor="middle" font-family="'Helvetica Neue', Arial, sans-serif" font-size="34" font-weight="800" fill="#0A1F50" letter-spacing="-0.5">
-            <tspan fill="#0A1F50">Predi</tspan><tspan fill="#2557CC">Salario</tspan><tspan fill="#4A90E2">IA</tspan>
-        </text>
-        <line x1="240" y1="535" x2="440" y2="535" stroke="#2557CC" stroke-width="1.5"/>
-        <circle cx="340" cy="535" r="3.5" fill="#2557CC"/>
-        <text x="340" y="558" text-anchor="middle" font-family="'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#2557CC" letter-spacing="4">INTELIGENCIA SALARIAL</text>
-    </svg>"""
+        Args:
+            max_items: numero maximo de noticias a obtener
+        """
+        return fetch_news(max_items)  # Obtiene noticias y cachea
 
     _surf = c["surface"]  # Color de fondo de superficie
     _surf_hi = c["surface_high"]  # Color de superficie alta
@@ -749,12 +717,19 @@ def render_landing(c, accent, cfg):
     _on_s = c["on_surface"]  # Color sobre superficie
     _on_sv = c["on_surface_variant"]  # Color sobre variante de superficie
 
+    logo_path = Path(__file__).parent / "logo_predi.png"  # Ruta al logo PNG
+    if logo_path.exists():  # Si existe el archivo del logo
+        _lc1, _lc2, _lc3 = st.columns([1, 2, 1])  # Columnas para centrar
+        with _lc2:  # Columna central
+            st.image(str(logo_path), use_container_width=True)  # Logo centrado, ancho completo de columna
+
+    # === SECCION: Hero card - Titulo, descripcion y botones de accion ===
+    # Card de PredicSalario IA
     st.markdown(f"""
     <div style='background:linear-gradient(135deg,{_surf},{_surf_hi});
         border:1px solid {_glass};border-radius:20px;padding:2.5rem 2rem;
-        max-width:700px;margin:2rem auto;text-align:center;position:relative;z-index:1;
+        max-width:700px;margin:0 auto;text-align:center;position:relative;z-index:1;
         box-shadow:0 8px 32px rgba(0,0,0,0.3),0 0 60px rgba(74,144,226,0.1);'>
-        <div style='max-width:240px;margin:0 auto 1.5rem;'>{shield_logo}</div>
         <h1 class='main-header' style='font-size:2.5rem;margin-bottom:0.5rem;background:linear-gradient(135deg,{accent},{c['primary_container']});
         -webkit-background-clip:text;-webkit-text-fill-color:transparent;'>PredicSalario IA</h1>
         <p style='color:{_on_sv};font-size:1.1rem;max-width:600px;margin:0 auto 0.5rem;'>
@@ -771,6 +746,7 @@ def render_landing(c, accent, cfg):
     </div>
     """, unsafe_allow_html=True)
 
+    # === SECCION: Tarjetas de caracteristicas - Random Forest, Red Neuronal, Dashboard, Playwright, Privacidad ===
     st.markdown(f"""
     <div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;
     max-width:900px;margin:2rem auto;padding:0 1rem;position:relative;z-index:1;'>
@@ -825,6 +801,7 @@ def render_landing(c, accent, cfg):
 
     st.divider()
 
+    # === SECCION: Informacion General del Sistema - Arquitectura, modelo, fuentes de datos ===
     st.markdown(f"<h2 id='info-sistema' style='text-align:center;margin-bottom:1rem;'>📋 Informacion General del Sistema</h2>", unsafe_allow_html=True)
 
     system_info = {
@@ -910,6 +887,7 @@ def render_landing(c, accent, cfg):
 
     st.divider()
 
+    # === SECCION: Arquitectura del Sistema - Flujo de datos y componentes ===
     st.markdown(f"<h2 id='arquitectura' style='text-align:center;margin-bottom:1rem;'>🏗️ Arquitectura del Sistema</h2>", unsafe_allow_html=True)
 
     arch_info = {
@@ -948,6 +926,7 @@ def render_landing(c, accent, cfg):
 
     st.divider()
 
+    # === SECCION: Metodologia - Pasos del pipeline de datos y Machine Learning ===
     st.markdown(f"<h2 id='metodologia' style='text-align:center;margin-bottom:0.5rem;'>"
                 f"🛠️ Metodologia</h2>", unsafe_allow_html=True)
     st.markdown(
@@ -997,6 +976,7 @@ def render_landing(c, accent, cfg):
 
     st.divider()
 
+    # === SECCION: Fuentes de Datos -	elempleo.com, DANE, Observatorio SENA ===
     st.markdown(f"<h2 id='fuentes' style='text-align:center;margin-bottom:1.5rem;'>📊 Fuentes de Datos</h2>", unsafe_allow_html=True)
     st.markdown(
         f"<p style='text-align:center;color:{c["on_surface_variant"]};max-width:700px;margin:0 auto 2rem;'>"
@@ -1035,6 +1015,7 @@ def render_landing(c, accent, cfg):
 
     st.divider()
 
+    # === SECCION: Limitaciones del Sistema ===
     st.markdown(f"<h2 style='text-align:center;margin-bottom:1.5rem;'>⚠️ Limitaciones</h2>", unsafe_allow_html=True)
     for lim in [
         "Sesgo geográfico: Solo ofertas en Medellín y área metropolitana",
@@ -1052,6 +1033,7 @@ def render_landing(c, accent, cfg):
 
     st.divider()
 
+    # === SECCION: Noticias del Mercado TI - Ultimas noticias de empleo tecnologico ===
     st.markdown(f"<h2 style='text-align:center;margin-bottom:1.5rem;'>📰 Noticias del Mercado TI</h2>", unsafe_allow_html=True)
     st.markdown(
         f"<p style='text-align:center;color:{c["on_surface_variant"]};max-width:600px;margin:0 auto 2rem;'>"
@@ -1090,7 +1072,16 @@ def render_landing(c, accent, cfg):
 
 
 def render_system_info(c, accent, cfg):
-    """Renderiza la página de información del sistema con documentación técnica completa."""
+    """Renderiza la pagina de informacion del sistema con documentacion tecnica completa.
+
+    Muestra 12 secciones: modelo ML, entrenamiento, interpretabilidad, uso,
+    stack tecnico, resultados, limitaciones, etica, fuentes de datos y auditoria de API.
+
+    Args:
+        c: dict de colores del tema oscuro (DARK_COLORS)
+        accent: string con color de acento azul (#4A90E2)
+        cfg: instancia de Config con constantes del proyecto
+    """
     st.markdown(f"<h1 class='main-header' style='background:linear-gradient(135deg,{accent},{c['primary_container']});"
                 f"-webkit-background-clip:text;-webkit-text-fill-color:transparent;'>ℹ️ Informacion del Sistema</h1>",
                 unsafe_allow_html=True)  # Título de la página con gradiente
@@ -1967,71 +1958,123 @@ def render_raw_data(cfg, scraper, cleaner, repo):
     st.markdown(f"**Total de registros:** {len(filtered)} de {len(df)} · **Fuente:** {src}")
 
 
+# Diccionario de codigos CNO (Clasificacion Nacional de Ocupaciones) del sector TICs
+# Fuente: Observatorio SENA APE - Ocupaciones con codigo CNO del sector TICs, IA, Seguridad Informatica y Programacion
 TICS_CNO_CODES = {
-    "0213": "Gerentes de sistemas de información",
-    "0131": "Gerentes de empresas de telecomunicaciones",
-    "2145": "Ingenieros de tecnologías de la información",
-    "2134": "Ingenieros electrónicos",
-    "2136": "Ingenieros de automatización e instrumentación",
-    "2137": "Ingenieros de telecomunicaciones",
-    "2171": "Analistas de sistemas informáticos",
-    "2172": "Administradores de servicios de TI",
-    "2173": "Desarrolladores de aplicaciones informáticas",
-    "2281": "Técnicos en tecnologías de la información",
-    "2331": "Técnicos en asistencia y soporte de TI",
-    "2242": "Técnicos en electrónica",
-    "2243": "Técnicos en automatización e instrumentación",
-    "2245": "Técnicos en telecomunicaciones",
-    "2254": "Técnicos en cartografía",
-    "8324": "Técnicos instaladores de redes y telecomunicaciones",
-    "8325": "Auxiliares técnicos de telecomunicaciones",
-    "8393": "Auxiliares técnicos en electrónica",
-    "2321": "Auxiliares en automatización industrial",
-    "8212": "Supervisores de electricidad y telecomunicaciones",
-    "9222": "Supervisores de fabricación de electrónicos",
-    "9382": "Ensambladores de productos electrónicos",
+    "0213": "Gerentes de sistemas de informacion",  # Gerencia de TI
+    "0131": "Gerentes de empresas de telecomunicaciones",  # Gerencia telecom
+    "2145": "Ingenieros de tecnologias de la informacion",  # Ingenieria TI
+    "2134": "Ingenieros electronicos",  # Ingenieria electronica
+    "2136": "Ingenieros de automatizacion e instrumentacion",  # Automatizacion
+    "2137": "Ingenieros de telecomunicaciones",  # Telecomunicaciones
+    "2171": "Analistas de sistemas informaticos",  # Analisis de sistemas
+    "2172": "Administradores de servicios de TI",  # Administracion TI
+    "2173": "Desarrolladores de aplicaciones informaticas",  # Desarrollo de software
+    "2281": "Tecnicos en tecnologias de la informacion",  # Soporte tecnico TI
+    "2331": "Tecnicos en asistencia y soporte de TI",  # Help desk
+    "2242": "Tecnicos en electronica",  # Tecnico electronica
+    "2243": "Tecnicos en automatizacion e instrumentacion",  # Tecnico automatizacion
+    "2245": "Tecnicos en telecomunicaciones",  # Tecnico telecom
+    "2254": "Tecnicos en cartografia",  # Tecnico cartografia
+    "8324": "Tecnicos instaladores de redes y telecomunicaciones",  # Instalacion redes
+    "8325": "Auxiliares tecnicos de telecomunicaciones",  # Auxiliar telecom
+    "8393": "Auxiliares tecnicos en electronica",  # Auxiliar electronica
+    "2321": "Auxiliares en automatizacion industrial",  # Auxiliar automatizacion
+    "8212": "Supervisores de electricidad y telecomunicaciones",  # Supervisor electricidad
+    "9222": "Supervisores de fabricacion de electronicos",  # Supervisor fabricacion
+    "9382": "Ensambladores de productos electronicos",  # Ensamblaje electronicos
 }
 
+# Categorias agrupadas de ocupaciones TICs por area funcional
+# Cada categoria contiene los codigos CNO que pertenecen a esa area
 TICS_CATEGORIES = {
-    "Desarrollo y Programación": ["2173", "2171"],
-    "Ingeniería TICs": ["2145", "2134", "2136", "2137"],
-    "Técnicos TI (Soporte)": ["2281", "2331"],
-    "Técnicos Telecom/Electrónica": ["2242", "2243", "2245", "2254"],
-    "Técnicos Instalación y Mantenimiento": ["8324", "8325", "8393", "2321"],
-    "Gerencia y Dirección TICs": ["0213", "0131"],
-    "Supervisión TICs": ["8212", "9222"],
-    "Fabricación Electrónica": ["9382"],
+    "Desarrollo y Programacion": ["2173", "2171"],  # Software y analisis de sistemas
+    "Ingenieria TICs": ["2145", "2134", "2136", "2137"],  # Ingenieria de TI y telecomunicaciones
+    "Tecnicos TI (Soporte)": ["2281", "2331"],  # Soporte tecnico y help desk
+    "Tecnicos Telecom/Electronica": ["2242", "2243", "2245", "2254"],  # Telecomunicaciones y electronica
+    "Tecnicos Instalacion y Mantenimiento": ["8324", "8325", "8393", "2321"],  # Instalacion y mantenimiento
+    "Gerencia y Direccion TICs": ["0213", "0131"],  # Gerencia de TI y telecomunicaciones
+    "Supervision TICs": ["8212", "9222"],  # Supervision electricidad y fabricacion
+    "Fabricacion Electronica": ["9382"],  # Ensamblaje de componentes electronicos
 }
 
+# Rangos salariales típicos por categoría y nivel de experiencia (COP mensual)
+# Basados en datos del mercado laboral de Colombia para el sector TICs
 TICS_SALARY_RANGES = {
-    "Desarrollo y Programación": {"junior": (2_500_000, 4_000_000), "mid": (4_000_000, 7_000_000), "senior": (7_000_000, 12_000_000)},
-    "Ingeniería TICs": {"junior": (3_000_000, 5_000_000), "mid": (5_000_000, 9_000_000), "senior": (9_000_000, 15_000_000)},
-    "Técnicos TI (Soporte)": {"junior": (1_800_000, 2_800_000), "mid": (2_800_000, 4_500_000), "senior": (4_500_000, 7_000_000)},
-    "Técnicos Telecom/Electrónica": {"junior": (1_600_000, 2_500_000), "mid": (2_500_000, 4_000_000), "senior": (4_000_000, 6_000_000)},
-    "Técnicos Instalación y Mantenimiento": {"junior": (1_400_000, 2_200_000), "mid": (2_200_000, 3_500_000), "senior": (3_500_000, 5_000_000)},
-    "Gerencia y Dirección TICs": {"junior": (5_000_000, 8_000_000), "mid": (8_000_000, 15_000_000), "senior": (15_000_000, 25_000_000)},
-    "Supervisión TICs": {"junior": (2_200_000, 3_500_000), "mid": (3_500_000, 5_500_000), "senior": (5_500_000, 8_000_000)},
-    "Fabricación Electrónica": {"junior": (1_200_000, 2_000_000), "mid": (2_000_000, 3_200_000), "senior": (3_200_000, 4_500_000)},
+    "Desarrollo y Programacion": {  # Software y analisis de sistemas
+        "junior": (2_500_000, 4_000_000),  # 0-2 anios de experiencia
+        "mid": (4_000_000, 7_000_000),  # 2-5 anios de experiencia
+        "senior": (7_000_000, 12_000_000),  # 5+ anios de experiencia
+    },
+    "Ingenieria TICs": {  # Ingenieria de TI y telecomunicaciones
+        "junior": (3_000_000, 5_000_000),
+        "mid": (5_000_000, 9_000_000),
+        "senior": (9_000_000, 15_000_000),
+    },
+    "Tecnicos TI (Soporte)": {  # Soporte tecnico y help desk
+        "junior": (1_800_000, 2_800_000),
+        "mid": (2_800_000, 4_500_000),
+        "senior": (4_500_000, 7_000_000),
+    },
+    "Tecnicos Telecom/Electronica": {  # Telecomunicaciones y electronica
+        "junior": (1_600_000, 2_500_000),
+        "mid": (2_500_000, 4_000_000),
+        "senior": (4_000_000, 6_000_000),
+    },
+    "Tecnicos Instalacion y Mantenimiento": {  # Instalacion y mantenimiento
+        "junior": (1_400_000, 2_200_000),
+        "mid": (2_200_000, 3_500_000),
+        "senior": (3_500_000, 5_000_000),
+    },
+    "Gerencia y Direccion TICs": {  # Gerencia de TI y telecomunicaciones
+        "junior": (5_000_000, 8_000_000),
+        "mid": (8_000_000, 15_000_000),
+        "senior": (15_000_000, 25_000_000),
+    },
+    "Supervision TICs": {  # Supervision electricidad y fabricacion
+        "junior": (2_200_000, 3_500_000),
+        "mid": (3_500_000, 5_500_000),
+        "senior": (5_500_000, 8_000_000),
+    },
+    "Fabricacion Electronica": {  # Ensamblaje de componentes electronicos
+        "junior": (1_200_000, 2_000_000),
+        "mid": (2_000_000, 3_200_000),
+        "senior": (3_200_000, 4_500_000),
+    },
 }
 
 
 def _render_tics_analysis(qual_df, qual_summary, c, accent):
-    import plotly.express as px
-    import plotly.graph_objects as go
+    """Renderiza el analisis del sector TICs a nivel nacional y por departamento.
 
-    st.markdown(f"<h2 style='color:{c["on_surface"]};'>💻 Análisis del Sector TICs - Colombia</h2>", unsafe_allow_html=True)
+    Muestra datos del Observatorio SENA APE con codigos CNO del sector TICs,
+    incluye distribucion por categoria, analisis de genero, rangos salariales
+    y recomendaciones estrategicas.
+
+    Args:
+        qual_df: DataFrame con datos de cualificacion del SENA
+        dict with level-level summary data
+        c: dict de colores del tema oscuro
+        accent: color de acento azul
+    """
+    import plotly.express as px  # Graficos interactivos para barras y variaciones
+    import plotly.graph_objects as go  # Graficos de barras agrupadas y apiladas
+
+    st.markdown(f"<h2 style='color:{c["on_surface"]};'>💻 Analisis del Sector TICs - Colombia</h2>", unsafe_allow_html=True)
+    # Tarjeta de fuente con codigos CNO del sector TICs
     st.markdown(f"""<div class='feature-card' style='padding:1rem;margin-bottom:1rem;border-left:4px solid {accent};'>
-        <p style='margin:0;font-size:0.9rem;'><strong>Fuente:</strong> Observatorio SENA APE - Ocupaciones con código CNO del sector TICs, IA, Seguridad Informática y Programación.</p>
+        <p style='margin:0;font-size:0.9rem;'><strong>Fuente:</strong> Observatorio SENA APE - Ocupaciones con codigo CNO del sector TICs, IA, Seguridad Informatica y Programacion.</p>
         <p style='margin:0.3rem 0 0;font-size:0.85rem;color:{c["on_surface_variant"]};'>
-            Códigos CNO: 0213, 0131, 2145, 2134, 2136, 2137, 2171, 2172, 2173, 2281, 2331, 2242, 2243, 2245, 2254, 8324, 8325, 8393, 2321, 8212, 9222, 9382
+            Codigos CNO: 0213, 0131, 2145, 2134, 2136, 2137, 2171, 2172, 2173, 2281, 2331, 2242, 2243, 2245, 2254, 8324, 8325, 8393, 2321, 8212, 9222, 9382
         </p>
     </div>""", unsafe_allow_html=True)
 
+    # Selector de departamento para filtrar datos TICs
     dept_filter = st.selectbox(
         "📍 Selecciona Departamento",
-        options=["Nacional (Colombia)", "Antioquia", "Bogotá D.C.", "Valle del Cauca", "Cundinamarca", "Santander", "Atlántico", "Risaralda", "Caldas", "Meta", "Boyacá"],
+        options=["Nacional (Colombia)", "Antioquia", "Bogota D.C.", "Valle del Cauca", "Cundinamarca", "Santander", "Atlantico", "Risaralda", "Caldas", "Meta", "Boyaca"],
         key="dept_tics_filter",
-        help="Selecciona el departamento para filtrar el análisis TICs"
+        help="Selecciona el departamento para filtrar el analisis TICs"
     )
 
     if dept_filter != "Nacional (Colombia)":
@@ -2039,95 +2082,107 @@ def _render_tics_analysis(qual_df, qual_summary, c, accent):
     else:
         st.info("📊 Mostrando datos TICs a nivel Nacional")
 
+    # Datos nacionales de inscritos en formacion TICs por categoria y genero
+    # Valores del Observatorio SENA APE para 2025 y 2026
     national_data = {
-        "Desarrollo y Programación": {"2025": 1556, "2026": 1896, "mujeres_2025": 503, "mujeres_2026": 689, "hombres_2025": 1053, "hombres_2026": 1207},
-        "Ingeniería TICs": {"2025": 441, "2026": 560, "mujeres_2025": 137, "mujeres_2026": 170, "hombres_2025": 304, "hombres_2026": 390},
-        "Técnicos TI (Soporte)": {"2025": 2906, "2026": 3500, "mujeres_2025": 1354, "mujeres_2026": 1666, "hombres_2025": 1552, "hombres_2026": 1834},
-        "Técnicos Telecom/Electrónica": {"2025": 149, "2026": 238, "mujeres_2025": 18, "mujeres_2026": 32, "hombres_2025": 131, "hombres_2026": 206},
-        "Técnicos Instalación y Mantenimiento": {"2025": 92, "2026": 127, "mujeres_2025": 8, "mujeres_2026": 12, "hombres_2025": 84, "hombres_2026": 115},
-        "Gerencia y Dirección TICs": {"2025": 43, "2026": 34, "mujeres_2025": 10, "mujeres_2026": 8, "hombres_2025": 33, "hombres_2026": 26},
-        "Supervisión TICs": {"2025": 14, "2026": 11, "mujeres_2025": 2, "mujeres_2026": 1, "hombres_2025": 12, "hombres_2026": 10},
-        "Fabricación Electrónica": {"2025": 27, "2026": 98, "mujeres_2025": 5, "mujeres_2026": 22, "hombres_2025": 22, "hombres_2026": 76},
+        "Desarrollo y Programacion": {"2025": 1556, "2026": 1896, "mujeres_2025": 503, "mujeres_2026": 689, "hombres_2025": 1053, "hombres_2026": 1207},
+        "Ingenieria TICs": {"2025": 441, "2026": 560, "mujeres_2025": 137, "mujeres_2026": 170, "hombres_2025": 304, "hombres_2026": 390},
+        "Tecnicos TI (Soporte)": {"2025": 2906, "2026": 3500, "mujeres_2025": 1354, "mujeres_2026": 1666, "hombres_2025": 1552, "hombres_2026": 1834},
+        "Tecnicos Telecom/Electronica": {"2025": 149, "2026": 238, "mujeres_2025": 18, "mujeres_2026": 32, "hombres_2025": 131, "hombres_2026": 206},
+        "Tecnicos Instalacion y Mantenimiento": {"2025": 92, "2026": 127, "mujeres_2025": 8, "mujeres_2026": 12, "hombres_2025": 84, "hombres_2026": 115},
+        "Gerencia y Direccion TICs": {"2025": 43, "2026": 34, "mujeres_2025": 10, "mujeres_2026": 8, "hombres_2025": 33, "hombres_2026": 26},
+        "Supervision TICs": {"2025": 14, "2026": 11, "mujeres_2025": 2, "mujeres_2026": 1, "hombres_2025": 12, "hombres_2026": 10},
+        "Fabricacion Electronica": {"2025": 27, "2026": 98, "mujeres_2025": 5, "mujeres_2026": 22, "hombres_2025": 22, "hombres_2026": 76},
     }
 
+    # Multiplicadores por departamento para estimar datos regionales
+    # Basados en la participacion de cada departamento en el PIB nacional
     dept_multipliers = {
-        "Nacional (Colombia)": 1.0,
-        "Antioquia": 0.24,
-        "Bogotá D.C.": 0.34,
-        "Valle del Cauca": 0.10,
-        "Cundinamarca": 0.06,
-        "Santander": 0.05,
-        "Atlántico": 0.04,
-        "Risaralda": 0.03,
-        "Caldas": 0.025,
-        "Meta": 0.02,
-        "Boyacá": 0.016,
+        "Nacional (Colombia)": 1.0,  # Datos nacionales completos
+        "Antioquia": 0.24,  # 24% del total nacional (principal zona TICs)
+        "Bogota D.C.": 0.34,  # 34% del total nacional (capital)
+        "Valle del Cauca": 0.10,  # 10% del total nacional
+        "Cundinamarca": 0.06,  # 6% del total nacional
+        "Santander": 0.05,  # 5% del total nacional
+        "Atlantico": 0.04,  # 4% del total nacional
+        "Risaralda": 0.03,  # 3% del total nacional
+        "Caldas": 0.025,  # 2.5% del total nacional
+        "Meta": 0.02,  # 2% del total nacional
+        "Boyaca": 0.016,  # 1.6% del total nacional
     }
 
-    mult = dept_multipliers.get(dept_filter, 1.0)
-    dept_data = {}
+    # Aplica multiplicador para obtener datos departamentales estimados
+    mult = dept_multipliers.get(dept_filter, 1.0)  # Usa multiplicador del departamento
+    dept_data = {}  # Almacena datos escalados por departamento
     for cat, data in national_data.items():
+        # Escala cada valor numerico por el multiplicador del departamento
         dept_data[cat] = {k: int(v * mult) if isinstance(v, (int, float)) else v for k, v in data.items()}
 
-    total_2025 = sum(d["2025"] for d in dept_data.values())
-    total_2026 = sum(d["2026"] for d in dept_data.values())
+    # Calcula totales generales para KPIs
+    total_2025 = sum(d["2025"] for d in dept_data.values())  # Total inscritos 2025
+    total_2026 = sum(d["2026"] for d in dept_data.values())  # Total inscritos 2026
+    # Variacion porcentual entre 2025 y 2026
     variacion = round((total_2026 - total_2025) / total_2025 * 100, 1) if total_2025 > 0 else 0
 
     st.divider()
+    # Seccion de resumen ejecutivo con KPIs principales
     st.markdown(f"<h3 style='color:{c["on_surface"]};'>📊 Resumen Ejecutivo Sector TICs - {dept_filter}</h3>", unsafe_allow_html=True)
 
-    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-    with kpi1:
+    kpi1, kpi2, kpi3, kpi4 = st.columns(4)  # 4 columnas para KPIs principales
+    with kpi1:  # KPI: Total inscritos 2026
         st.markdown(f"""<div class='metric-card'>
             <p style='color:{c["on_surface_variant"]};margin:0;font-size:0.85rem;'>📋 Total Inscritos 2026</p>
             <p style='font-size:1.8rem;font-weight:800;margin:0.2rem 0;color:{accent};'>{total_2026:,}</p>
         </div>""", unsafe_allow_html=True)
-    with kpi2:
+    with kpi2:  # KPI: Total inscritos 2025
         st.markdown(f"""<div class='metric-card'>
             <p style='color:{c["on_surface_variant"]};margin:0;font-size:0.85rem;'>📋 Total Inscritos 2025</p>
             <p style='font-size:1.8rem;font-weight:800;margin:0.2rem 0;color:{accent};'>{total_2025:,}</p>
         </div>""", unsafe_allow_html=True)
-    with kpi3:
-        color = "#2557CC" if variacion >= 0 else "#ba1a1a"
+    with kpi3:  # KPI: Variacion interanual
+        color = "#2557CC" if variacion >= 0 else "#ba1a1a"  # Azul si crece, rojo si decrece
         st.markdown(f"""<div class='metric-card'>
-            <p style='color:{c["on_surface_variant"]};margin:0;font-size:0.85rem;'>📈 Variación 2026 vs 2025</p>
+            <p style='color:{c["on_surface_variant"]};margin:0;font-size:0.85rem;'>📈 Variacion 2026 vs 2025</p>
             <p style='font-size:1.8rem;font-weight:800;margin:0.2rem 0;color:{color};'>{variacion:+.1f}%</p>
         </div>""", unsafe_allow_html=True)
-    with kpi4:
-        total_mujeres = sum(d["mujeres_2026"] for d in dept_data.values())
-        brecha = round(total_mujeres / total_2026 * 100, 1) if total_2026 > 0 else 0
+    with kpi4:  # KPI: Participacion mujeres
+        total_mujeres = sum(d["mujeres_2026"] for d in dept_data.values())  # Total mujeres 2026
+        brecha = round(total_mujeres / total_2026 * 100, 1) if total_2026 > 0 else 0  # % mujeres
         st.markdown(f"""<div class='metric-card'>
-            <p style='color:{c["on_surface_variant"]};margin:0;font-size:0.85rem;'>👩 Participación Mujeres 2026</p>
+            <p style='color:{c["on_surface_variant"]};margin:0;font-size:0.85rem;'>👩 Participacion Mujeres 2026</p>
             <p style='font-size:1.8rem;font-weight:800;margin:0.2rem 0;color:{accent};'>{brecha:.1f}%</p>
         </div>""", unsafe_allow_html=True)
 
     st.divider()
-    st.markdown(f"<h3 style='color:{c["on_surface"]};'>📊 Distribución por Categoría TICs</h3>", unsafe_allow_html=True)
+    # Grafico de barras agrupadas: inscritos por categoria TICs (2025 vs 2026)
+    st.markdown(f"<h3 style='color:{c["on_surface"]};'>📊 Distribucion por Categoria TICs</h3>", unsafe_allow_html=True)
 
-    col_chart1, col_chart2 = st.columns(2)
+    col_chart1, col_chart2 = st.columns(2)  # 2 columnas para graficos
 
-    with col_chart1:
-        cats = list(dept_data.keys())
-        vals_2025 = [dept_data[cat]["2025"] for cat in cats]
-        vals_2026 = [dept_data[cat]["2026"] for cat in cats]
+    with col_chart1:  # Grafico de barras agrupadas
+        cats = list(dept_data.keys())  # Nombres de categorias
+        vals_2025 = [dept_data[cat]["2025"] for cat in cats]  # Valores 2025
+        vals_2026 = [dept_data[cat]["2026"] for cat in cats]  # Valores 2026
 
+        # Grafico de barras agrupadas con Plotly
         fig_bar = go.Figure()
-        fig_bar.add_trace(go.Bar(name="2025", x=cats, y=vals_2025, marker_color="#6AABF0"))
-        fig_bar.add_trace(go.Bar(name="2026", x=cats, y=vals_2026, marker_color="#4A90E2"))
+        fig_bar.add_trace(go.Bar(name="2025", x=cats, y=vals_2025, marker_color="#6AABF0"))  # Barras 2025
+        fig_bar.add_trace(go.Bar(name="2026", x=cats, y=vals_2026, marker_color="#4A90E2"))  # Barras 2026
         fig_bar.update_layout(
-            barmode="group",
-            plot_bgcolor="rgba(0,0,0,0)",
+            barmode="group",  # Barras agrupadas lado a lado
+            plot_bgcolor="rgba(0,0,0,0)",  # Fondo transparente
             paper_bgcolor="rgba(0,0,0,0)",
-            font=dict(color=c["on_surface"], size=10),
-            xaxis=dict(gridcolor="rgba(128,128,128,0.1)", tickangle=-45),
-            yaxis=dict(gridcolor="rgba(128,128,128,0.1)"),
-            height=400,
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-            title="Inscritos por Categoría TICs",
+            font=dict(color=c["on_surface"], size=10),  # Fuente blanca
+            xaxis=dict(gridcolor="rgba(128,128,128,0.1)", tickangle=-45),  # Eje X con rotacion
+            yaxis=dict(gridcolor="rgba(128,128,128,0.1)"),  # Eje Y con grilla
+            height=400,  # Altura del grafico
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),  # Leyenda horizontal
+            title="Inscritos por Categoria TICs",
         )
-        st.plotly_chart(fig_bar, use_container_width=True)
+        st.plotly_chart(fig_bar, use_container_width=True)  # Muestra grafico responsivo
 
-    with col_chart2:
+    with col_chart2:  # Grafico de variacion porcentual
+        # Calcula variacion porcentual por categoria
         variaciones = {}
         for cat, data in dept_data.items():
             if data["2025"] > 0:
@@ -2135,14 +2190,15 @@ def _render_tics_analysis(qual_df, qual_summary, c, accent):
             else:
                 variaciones[cat] = 0
 
+        # Grafico de barras de variacion con colores rojo/azul
         fig_var = px.bar(
-            x=list(variaciones.keys()),
-            y=list(variaciones.values()),
-            labels={"x": "Categoría", "y": "Variación 2026 vs 2025 (%)"},
-            color=list(variaciones.values()),
-            color_continuous_scale=["#ba1a1a", "#2557CC"],
-            text=[f"{v:+.1f}%" for v in variaciones.values()],
-            title="Variación Interanual por Categoría",
+            x=list(variaciones.keys()),  # Categorias en eje X
+            y=list(variaciones.values()),  # Variaciones en eje Y
+            labels={"x": "Categoria", "y": "Variacion 2026 vs 2025 (%)"},
+            color=list(variaciones.values()),  # Coloreado por valor
+            color_continuous_scale=["#ba1a1a", "#2557CC"],  # Rojo (decrece) a azul (crece)
+            text=[f"{v:+.1f}%" for v in variaciones.values()],  # Etiquetas de texto
+            title="Variacion Interanual por Categoria",
         )
         fig_var.update_layout(
             plot_bgcolor="rgba(0,0,0,0)",
@@ -2150,36 +2206,39 @@ def _render_tics_analysis(qual_df, qual_summary, c, accent):
             font=dict(color=c["on_surface"], size=10),
             xaxis=dict(gridcolor="rgba(128,128,128,0.1)", tickangle=-45),
             yaxis=dict(gridcolor="rgba(128,128,128,0.1)"),
-            showlegend=False,
+            showlegend=False,  # Sin leyenda (ya tiene barra de color)
             height=400,
         )
-        fig_var.update_traces(textposition="outside")
+        fig_var.update_traces(textposition="outside")  # Etiquetas afuera de las barras
         st.plotly_chart(fig_var, use_container_width=True)
 
     st.divider()
-    st.markdown(f"<h3 style='color:{c["on_surface"]};'>👩‍💻 Análisis de Género por Categoría</h3>", unsafe_allow_html=True)
+    # Grafico apilado de genero por categoria TICs
+    st.markdown(f"<h3 style='color:{c["on_surface"]};'>👩‍💻 Analisis de Genero por Categoria</h3>", unsafe_allow_html=True)
 
+    # Prepara datos de genero para grafico apilado
     gender_data = []
     for cat, data in dept_data.items():
-        total_m = data["mujeres_2026"]
-        total_h = data["hombres_2026"]
-        total = total_m + total_h
-        pct_m = round(total_m / total * 100, 1) if total > 0 else 0
+        total_m = data["mujeres_2026"]  # Mujeres 2026
+        total_h = data["hombres_2026"]  # Hombres 2026
+        total = total_m + total_h  # Total por categoria
+        pct_m = round(total_m / total * 100, 1) if total > 0 else 0  # % mujeres
         gender_data.append({
-            "Categoría": cat,
+            "Categoria": cat,
             "Mujeres": total_m,
             "Hombres": total_h,
             "Total": total,
             "% Mujeres": pct_m,
         })
 
-    gender_df = pd.DataFrame(gender_data)
+    gender_df = pd.DataFrame(gender_data)  # Convierte a DataFrame
 
+    # Grafico de barras apiladas de genero
     fig_gender = go.Figure()
-    fig_gender.add_trace(go.Bar(name="Mujeres", x=gender_df["Categoría"], y=gender_df["Mujeres"], marker_color="#ec4899"))
-    fig_gender.add_trace(go.Bar(name="Hombres", x=gender_df["Categoría"], y=gender_df["Hombres"], marker_color="#3b82f6"))
+    fig_gender.add_trace(go.Bar(name="Mujeres", x=gender_df["Categoria"], y=gender_df["Mujeres"], marker_color="#ec4899"))  # Rosa
+    fig_gender.add_trace(go.Bar(name="Hombres", x=gender_df["Categoria"], y=gender_df["Hombres"], marker_color="#3b82f6"))  # Azul
     fig_gender.update_layout(
-        barmode="stack",
+        barmode="stack",  # Barras apiladas
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
         font=dict(color=c["on_surface"], size=10),
@@ -2187,19 +2246,21 @@ def _render_tics_analysis(qual_df, qual_summary, c, accent):
         yaxis=dict(gridcolor="rgba(128,128,128,0.1)"),
         height=400,
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-        title="Distribución de Género por Categoría TICs",
+        title="Distribucion de Genero por Categoria TICs",
     )
     st.plotly_chart(fig_gender, use_container_width=True)
 
     st.divider()
-    st.markdown(f"<h3 style='color:{c["on_surface"]};'>💰 Rangos Salariales Típicos por Categoría (COP Mensual)</h3>", unsafe_allow_html=True)
+    # Tarjetas de rangos salarios por categoria y nivel
+    st.markdown(f"<h3 style='color:{c["on_surface"]};'>💰 Rangos Salariales Tipicos por Categoria (COP Mensual)</h3>", unsafe_allow_html=True)
 
-    salary_cols = st.columns(2)
+    salary_cols = st.columns(2)  # 2 columnas para rangos salariales
     for i, (cat, ranges) in enumerate(TICS_SALARY_RANGES.items()):
-        with salary_cols[i % 2]:
-            j_min, j_max = ranges["junior"]
-            m_min, m_max = ranges["mid"]
-            s_min, s_max = ranges["senior"]
+        with salary_cols[i % 2]:  # Alterna entre columnas
+            j_min, j_max = ranges["junior"]  # Rango junior
+            m_min, m_max = ranges["mid"]  # Rango mid
+            s_min, s_max = ranges["senior"]  # Rango senior
+            # Tarjeta de rango salarial por categoria
             st.markdown(f"""<div class='feature-card' style='padding:1rem;margin:0.5rem 0;'>
                 <p style='font-weight:700;color:{accent};margin:0 0 0.5rem;'>{cat}</p>
                 <div style='display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:0.85rem;'>
@@ -2219,65 +2280,86 @@ def _render_tics_analysis(qual_df, qual_summary, c, accent):
             </div>""", unsafe_allow_html=True)
 
     st.divider()
+    # Hallazgos clave del analisis TICs
     st.markdown(f"<h3 style='color:{c["on_surface"]};'>💡 Hallazgos Clave y Recomendaciones</h3>", unsafe_allow_html=True)
 
+    # Lista de hallazgos principales con iconos
     findings = [
-        ("📈", "Desarrollo y Programación", f"Crecimiento del +21.9% - Alta demanda de talento en software. {dept_filter}: ~{dept_data['Desarrollo y Programación']['2026']:,} inscritos."),
-        ("📈", "Ingeniería TICs", f"Crecimiento del +27.0% - Crecimiento sostenido en ingeniería. {dept_filter}: ~{dept_data['Ingeniería TICs']['2026']:,} inscritos."),
-        ("📈", "Fabricación Electrónica", f"Crecimiento del +263% - Explosión en ensamblaje de componentes electrónicos."),
-        ("📈", "Técnicos en Automatización", f"Crecimiento del +140% - Impulso de industria 4.0."),
-        ("⚠️", "Gerencia TICs", f"Descenso del -20.9% - Posible saturación o falta de promoción interna."),
-        ("⚠️", "Supervisión TICs", f"Descenso del -21.4% - Brecha en cuadro medio de gestión tecnológica."),
+        ("📈", "Desarrollo y Programacion", f"Crecimiento del +21.9% - Alta demanda de talento en software. {dept_filter}: ~{dept_data['Desarrollo y Programacion']['2026']:,} inscritos."),
+        ("📈", "Ingenieria TICs", f"Crecimiento del +27.0% - Crecimiento sostenido en ingenieria. {dept_filter}: ~{dept_data['Ingenieria TICs']['2026']:,} inscritos."),
+        ("📈", "Fabricacion Electronica", f"Crecimiento del +263% - Explosion en ensamblaje de componentes electronicos."),
+        ("📈", "Tecnicos en Automatizacion", f"Crecimiento del +140% - Impulso de industria 4.0."),
+        ("⚠️", "Gerencia TICs", f"Descenso del -20.9% - Posible saturacion o falta de promocion interna."),
+        ("⚠️", "Supervision TICs", f"Descenso del -21.4% - Brecha en cuadro medio de gestion tecnologica."),
     ]
 
-    for icon, title, desc in findings:
+    for icon, title, desc in findings:  # Muestra cada hallazgo en tarjeta
         st.markdown(f"""<div class='feature-card' style='padding:0.8rem 1.2rem;margin:0.4rem 0;'>
             <p style='margin:0;'><strong>{icon} {title}:</strong> {desc}</p>
         </div>""", unsafe_allow_html=True)
 
     st.divider()
-    st.markdown(f"<h3 style='color:{c["on_surface"]};'>📋 Recomendaciones Estratégicas</h3>", unsafe_allow_html=True)
+    # Recomendaciones estrategicas para el sector TICs
+    st.markdown(f"<h3 style='color:{c["on_surface"]};'>📋 Recomendaciones Estrategicas</h3>", unsafe_allow_html=True)
     recs = [
         "Ampliar oferta en ciberseguridad, IA generativa y cloud computing",
-        "Programas específicos para reducir brecha de género en desarrollo e ingeniería",
-        "Rutas de carrera para técnico → supervisor → gerente TICs",
-        "Fortalecer capacidades TICs en departamentos con baja participación",
-        "Alinear formación con estándares internacionales (AWS, Cisco, ISC2)",
+        "Programas especificos para reducir brecha de genero en desarrollo e ingenieria",
+        "Rutas de carrera para tecnico -> supervisor -> gerente TICs",
+        "Fortalecer capacidades TICs en departamentos con baja participacion",
+        "Alinear formacion con estandares internacionales (AWS, Cisco, ISC2)",
     ]
-    for i, rec in enumerate(recs, 1):
+    for i, rec in enumerate(recs, 1):  # Numera y muestra cada recomendacion
         st.markdown(f"""<div class='feature-card' style='padding:0.8rem 1.2rem;margin:0.4rem 0;'>
             <p style='margin:0;'><strong>{i}.</strong> {rec}</p>
         </div>""", unsafe_allow_html=True)
 
     st.divider()
-    st.markdown(f"<h3 style='color:{c["on_surface"]};'>📁 Códigos CNO del Sector TICs</h3>", unsafe_allow_html=True)
+    # Tabla de codigos CNO del sector TICs
+    st.markdown(f"<h3 style='color:{c["on_surface"]};'>📁 Codigos CNO del Sector TICs</h3>", unsafe_allow_html=True)
     with st.expander("Ver tabla completa de ocupaciones TICs identificadas", expanded=False):
-        occ_data = []
+        occ_data = []  # Lista de ocupaciones con su categoria
         for code, name in TICS_CNO_CODES.items():
             for cat, codes in TICS_CATEGORIES.items():
-                if code in codes:
-                    occ_data.append({"Código CNO": code, "Ocupación": name, "Categoría TICs": cat})
+                if code in codes:  # Encuentra la categoria del codigo
+                    occ_data.append({"Codigo CNO": code, "Ocupacion": name, "Categoria TICs": cat})
                     break
-        occ_df = pd.DataFrame(occ_data)
-        st.dataframe(occ_df, use_container_width=True)
+        occ_df = pd.DataFrame(occ_data)  # Convierte a DataFrame
+        st.dataframe(occ_df, use_container_width=True)  # Muestra tabla
 
 
 def render_executive_report(cfg, scraper, cleaner, repo, model):
-    from src.models.neural_network import EmployabilityAnalyzer
-    from src.data.sena_catalog import (
-        parse_qualification_sheet, compute_qualification_summary,
-        QUALIFICATION_LEVELS
+    """Renderiza el informe ejecutivo de empleabilidad con red neuronal.
+
+    Permite subir archivos Excel/CSV del SENA o genericos, analiza los datos
+    con una red neuronal (MLPRegressor), y genera graficos de distribucion
+    por municipio, salario, roles, habilidades y oportunidades de empleabilidad.
+    Tambien analiza archivos SENA por niveles de cualificacion y sector TICs.
+
+    Args:
+        cfg: instancia de Config con constantes del proyecto
+        scraper: instancia de scraper para obtener datos
+        cleaner: instancia de DataCleaner para limpiar datos
+        repo: instancia de DataRepository para leer/guardar CSV
+        model: instancia de SalaryPredictor (no usada directamente aqui)
+    """
+    from src.models.neural_network import EmployabilityAnalyzer  # Analizador de empleabilidad con red neuronal
+    from src.data.sena_catalog import (  # Catalogo SENA para parsear archivos del Observatorio
+        parse_qualification_sheet, compute_qualification_summary,  # Parser y resumen de cualificacion
+        QUALIFICATION_LEVELS  # Niveles de cualificacion (1-6)
     )
 
-    c = DARK_COLORS
-    accent = "#4A90E2"
+    c = DARK_COLORS  # Paleta de colores oscuros
+    accent = "#4A90E2"  # Color de acento azul
 
+    # Titulo principal del informe ejecutivo
     st.markdown(f"<h1 class='main-header' style='background:linear-gradient(135deg,{accent},{c['primary_container']});"
                 f"-webkit-background-clip:text;-webkit-text-fill-color:transparent;'>📈 Informe Ejecutivo de Empleabilidad</h1>", unsafe_allow_html=True)
+    # Descripcion de la funcionalidad
     st.markdown(f"<p style='color:{c['on_surface_variant']};margin-bottom:0.5rem;'>"
                 f"Analiza un archivo Excel/CSV con datos de empleo del Area Metropolitana de Medellin. "
                 f"La red neuronal identifica patrones de demanda salarial, habilidades y oportunidades.</p>",
                 unsafe_allow_html=True)
+    # Tarjeta informativa sobre la fuente de datos SENA
     st.markdown(f"""<div class='feature-card' style='padding:1rem;margin-bottom:1.5rem;border-left:4px solid {accent};'>
         <p style='margin:0;font-size:0.9rem;'><strong>📊 Fuente de datos:</strong> Observatorio de Empleo y Desarrollo Profesional del SENA</p>
         <p style='margin:0.3rem 0 0;font-size:0.85rem;color:{c["on_surface_variant"]};'>
@@ -2287,12 +2369,14 @@ def render_executive_report(cfg, scraper, cleaner, repo, model):
             Formatos soportados: Excel (.xlsx) y CSV (.csv). La red neuronal analiza automaticamente los datos y genera un informe ejecutivo con graficos y recomendaciones.
         </p>
     </div>""", unsafe_allow_html=True)
-    st.divider()
+    st.divider()  # Linea divisora
 
+    # Layout: columna de upload (3/5) + columna de info (2/5)
     col_upload, col_info = st.columns([3, 2])
 
-    with col_upload:
+    with col_upload:  # Seccion de subida de archivo
         st.markdown(f"<h3 style='color:{c["on_surface"]};'>📄 Subir Archivo de Datos</h3>", unsafe_allow_html=True)
+        # Uploader de archivos Excel o CSV
         uploaded_file = st.file_uploader(
             "Selecciona un archivo Excel (.xlsx) o CSV (.csv)",
             type=["xlsx", "csv"],
@@ -2300,8 +2384,9 @@ def render_executive_report(cfg, scraper, cleaner, repo, model):
             key="file_upload_exec",
         )
 
-    with col_info:
+    with col_info:  # Seccion de formatos soportados
         st.markdown(f"<h3 style='color:{c["on_surface"]};'>ℹ️ Formatos Soportados</h3>", unsafe_allow_html=True)
+        # Tarjeta con formatos soportados
         st.markdown(f"""
         <div class='feature-card' style='padding:1rem;font-size:0.85rem;'>
             <p style='margin:0.3rem 0;'><strong>Formato SENA (recomendado):</strong></p>
@@ -2319,19 +2404,21 @@ def render_executive_report(cfg, scraper, cleaner, repo, model):
         </div>
         """, unsafe_allow_html=True)
 
-    st.divider()
+    st.divider()  # Linea divisora
 
-    df = None
-    is_sena_file = False
-    qual_df = None
-    qual_summary = None
+    # Variables de control para archivos SENA vs genericos
+    df = None  # DataFrame con datos cargados
+    is_sena_file = False  # Bandera: True si es archivo SENA
+    qual_df = None  # DataFrame de cualificacion SENA
+    qual_summary = None  # Resumen de cualificacion por nivel
 
-    if uploaded_file is not None:
+    if uploaded_file is not None:  # Si el usuario subio un archivo
         try:
-            if uploaded_file.name.endswith(".csv"):
-                df = pd.read_csv(uploaded_file, encoding="utf-8")
-            else:
-                xl = pd.ExcelFile(uploaded_file)
+            if uploaded_file.name.endswith(".csv"):  # Archivo CSV
+                df = pd.read_csv(uploaded_file, encoding="utf-8")  # Lee CSV directamente
+            else:  # Archivo Excel
+                xl = pd.ExcelFile(uploaded_file)  # Abre Excel
+                # Detecta si es archivo SENA buscando hojas "total nacional" o "departamento"
                 has_sena_sheets = any(
                     "total" in s.lower() and "nacional" in s.lower()
                     for s in xl.sheet_names
@@ -2340,11 +2427,12 @@ def render_executive_report(cfg, scraper, cleaner, repo, model):
                     for s in xl.sheet_names
                 )
 
-                if has_sena_sheets:
+                if has_sena_sheets:  # Es archivo SENA
                     is_sena_file = True
                     st.success(f"✅ Archivo SENA detectado: **{uploaded_file.name}**")
                     st.info(f"📋 Hojas disponibles: {', '.join(xl.sheet_names)}")
 
+                    # Selector de hoja a analizar
                     sheet_choice = st.selectbox(
                         "Selecciona hoja a analizar",
                         xl.sheet_names,
@@ -2352,100 +2440,112 @@ def render_executive_report(cfg, scraper, cleaner, repo, model):
                         help="'Total nacional' para datos generales, 'por Departamento' para filtrar por Antioquia"
                     )
 
+                    # Parsea la hoja seleccionada
                     qual_df = parse_qualification_sheet(xl, sheet_choice)
                     if qual_df is not None and not qual_df.empty:
                         st.success(f"✅ Parseados **{len(qual_df)} registros** de niveles de cualificacion")
+                        # Calcula resumen por nivel de cualificacion
                         qual_summary = compute_qualification_summary(qual_df)
                     else:
                         st.warning("No se pudieron parsear los datos de cualificacion de esta hoja")
-                else:
+                else:  # Archivo Excel generico
                     df = pd.read_excel(uploaded_file)
                     st.success(f"✅ Archivo cargado: **{uploaded_file.name}** ({len(df)} registros, {len(df.columns)} columnas)")
 
+            # Muestra vista previa del archivo generico
             if not is_sena_file and df is not None:
                 with st.expander(" Vista previa del archivo", expanded=False):
                     st.dataframe(df.head(10), use_container_width=True)
 
-        except Exception as e:
+        except Exception as e:  # Error al leer archivo
             st.error(f"❌ Error al leer el archivo: {str(e)}")
-            return
-    else:
-        df = load_or_fetch_data(cfg, scraper, cleaner, repo)
+            return  # Sale de la funcion
+    else:  # No se subio archivo, usa datos existentes del sistema
+        df = load_or_fetch_data(cfg, scraper, cleaner, repo)  # Carga datos del mercado
         if df is not None and not df.empty:
             st.info("ℹ️ Usando datos existentes del sistema. Sube un archivo Excel/CSV para analizar datos propios.")
-        else:
+        else:  # No hay datos disponibles
             st.warning("### ⚠️ No hay datos disponibles")
             st.info("""
             **Opciones:**
             1. Sube un archivo Excel/CSV con datos de empleo
             2. Ejecuta el scraping desde **📊 Analisis del Mercado**
             """)
-            return
+            return  # Sale de la funcion
 
+    # === SECCION: Analisis de niveles de cualificacion SENA ===
     if is_sena_file and qual_df is not None and not qual_df.empty:
         st.divider()
+        # Titulo del analisis de cualificacion
         st.markdown(f"<h2 style='color:{c["on_surface"]};'>📊 Analisis de Niveles de Cualificacion - Antioquia</h2>", unsafe_allow_html=True)
 
+        # Indica si es datos departamentales o nacionales
         if sheet_choice and "departamento" in sheet_choice.lower():
             st.info("📊 Mostrando datos del departamento seleccionado")
         else:
             st.info("📊 Mostrando datos nacionales (selecciona 'por Departamento' y filtra Antioquia para datos regionales)")
 
-        if qual_summary:
+        if qual_summary:  # Si hay resumen de cualificacion
+            # KPIs: Total 2026, Total 2025, Variacion
             col1, col2, col3 = st.columns(3)
+            # Calcula totales por nivel
             total_2026 = sum(s["total_2026"] for s in qual_summary.values())
             total_2025 = sum(s["total_2025"] for s in qual_summary.values())
+            # Variacion porcentual total
             variacion_total = round((total_2026 - total_2025) / total_2025 * 100, 1) if total_2025 > 0 else 0
 
-            with col1:
+            with col1:  # KPI: Total 2026
                 st.markdown(f"""<div class='metric-card'>
                     <p style='color:{c['on_surface_variant']};margin:0;font-size:0.85rem;'>📋 Total Inscritos 2026</p>
                     <p style='font-size:1.8rem;font-weight:800;margin:0.2rem 0;color:{accent};'>{total_2026:,}</p>
                 </div>""", unsafe_allow_html=True)
-            with col2:
+            with col2:  # KPI: Total 2025
                 st.markdown(f"""<div class='metric-card'>
                     <p style='color:{c['on_surface_variant']};margin:0;font-size:0.85rem;'>📋 Total Inscritos 2025</p>
                     <p style='font-size:1.8rem;font-weight:800;margin:0.2rem 0;color:{accent};'>{total_2025:,}</p>
                 </div>""", unsafe_allow_html=True)
-            with col3:
+            with col3:  # KPI: Variacion
                 color = "#2557CC" if variacion_total >= 0 else "#ba1a1a"
                 st.markdown(f"""<div class='metric-card'>
                     <p style='color:{c['on_surface_variant']};margin:0;font-size:0.85rem;'>📈 Variacion 2026 vs 2025</p>
                     <p style='font-size:1.8rem;font-weight:800;margin:0.2rem 0;color:{color};'>{variacion_total:+.1f}%</p>
                 </div>""", unsafe_allow_html=True)
 
-            st.divider()
+            st.divider()  # Linea divisora
 
+            # Grafico de barras agrupadas por nivel de cualificacion
             st.markdown(f"<h3 style='color:{c["on_surface"]};'>📊 Distribucion por Nivel de Cualificacion</h3>", unsafe_allow_html=True)
-            import plotly.express as px
-            import plotly.graph_objects as go
+            import plotly.express as px  # Para graficos de variacion
+            import plotly.graph_objects as go  # Para barras agrupadas
 
+            # Prepara datos de niveles para grafico
             levels_data = []
             for level, data in qual_summary.items():
                 levels_data.append({
-                    "Nivel": data["nombre"].replace("Ocupaciones nivel ", "").title(),
+                    "Nivel": data["nombre"].replace("Ocupaciones nivel ", "").title(),  # Nombre legible
                     "Inscritos 2025": data["total_2025"],
                     "Inscritos 2026": data["total_2026"],
                     "Variacion %": data["variacion_pct"],
                 })
 
-            levels_df = pd.DataFrame(levels_data)
+            levels_df = pd.DataFrame(levels_data)  # Convierte a DataFrame
 
+            # Grafico de barras agrupadas 2025 vs 2026
             fig_bar = go.Figure()
             fig_bar.add_trace(go.Bar(
-                name="2025",
+                name="2025",  # Leyenda 2025
                 x=levels_df["Nivel"],
                 y=levels_df["Inscritos 2025"],
-                marker_color="#6AABF0",
+                marker_color="#6AABF0",  # Azul claro
             ))
             fig_bar.add_trace(go.Bar(
-                name="2026",
+                name="2026",  # Leyenda 2026
                 x=levels_df["Nivel"],
                 y=levels_df["Inscritos 2026"],
-                marker_color="#4A90E2",
+                marker_color="#4A90E2",  # Azul principal
             ))
             fig_bar.update_layout(
-                barmode="group",
+                barmode="group",  # Barras agrupadas
                 plot_bgcolor="rgba(0,0,0,0)",
                 paper_bgcolor="rgba(0,0,0,0)",
                 font=dict(color=c["on_surface"]),
@@ -2456,13 +2556,14 @@ def render_executive_report(cfg, scraper, cleaner, repo, model):
             )
             st.plotly_chart(fig_bar, use_container_width=True)
 
+            # Grafico de variacion porcentual por nivel
             st.markdown(f"<h3 style='color:{c["on_surface"]};'>📈 Variacion Interanual por Nivel</h3>", unsafe_allow_html=True)
             fig_var = px.bar(
                 x=levels_df["Nivel"],
                 y=levels_df["Variacion %"],
                 labels={"x": "Nivel de Cualificacion", "y": "Variacion 2026 vs 2025 (%)"},
                 color=levels_df["Variacion %"],
-                color_continuous_scale=["#ba1a1a", "#2557CC"],
+                color_continuous_scale=["#ba1a1a", "#2557CC"],  # Rojo a azul
                 text=[f"{v:+.1f}%" for v in levels_df["Variacion %"]],
             )
             fig_var.update_layout(
@@ -2474,55 +2575,63 @@ def render_executive_report(cfg, scraper, cleaner, repo, model):
                 showlegend=False,
                 height=350,
             )
-            fig_var.update_traces(textposition="outside")
+            fig_var.update_traces(textposition="outside")  # Etiquetas afuera
             st.plotly_chart(fig_var, use_container_width=True)
 
-            st.divider()
+            st.divider()  # Linea divisora
 
+            # Detalle por nivel de cualificacion en expanders
             st.markdown(f"<h3 style='color:{c["on_surface"]};'>🔍 Detalle por Nivel</h3>", unsafe_allow_html=True)
-            for level, data in qual_summary.items():
+            for level, data in qual_summary.items():  # Itera por cada nivel
                 with st.expander(f"📋 {data['nombre']} - {data['total_2026']:,} inscritos 2026", expanded=False):
-                    col_a, col_b = st.columns(2)
+                    col_a, col_b = st.columns(2)  # 2 columnas de metricas
                     with col_a:
+                        # Metricas de mujeres y hombres 2026 con delta
                         st.metric("Mujeres 2026", f"{data['total_mujeres_2026']:,}", f"{data['total_mujeres_2026'] - data['total_mujeres_2025']:,}")
                         st.metric("Hombres 2026", f"{data['total_hombres_2026']:,}", f"{data['total_hombres_2026'] - data['total_hombres_2025']:,}")
                     with col_b:
                         st.metric("Total 2025", f"{data['total_2025']:,}")
                         st.metric("Variacion", f"{data['variacion_pct']:+.1f}%")
 
-            st.divider()
+            st.divider()  # Linea divisora
 
+            # Insights y recomendaciones basados en variacion por nivel
             st.markdown(f"<h3 style='color:{c["on_surface"]};'>💡 Insights y Recomendaciones</h3>", unsafe_allow_html=True)
-            insights = []
+            insights = []  # Lista de insights generados
             for level, data in qual_summary.items():
-                nivel_name = data["nombre"].replace("Ocupaciones nivel ", "").title()
-                if data["variacion_pct"] > 10:
+                nivel_name = data["nombre"].replace("Ocupaciones nivel ", "").title()  # Nombre legible
+                if data["variacion_pct"] > 10:  # Crecimiento fuerte
                     insights.append(f"📈 **{nivel_name}**: Crecimiento fuerte del {data['variacion_pct']:+.1f}% - Alta demanda de profesionales en este nivel")
-                elif data["variacion_pct"] > 0:
+                elif data["variacion_pct"] > 0:  # Crecimiento moderado
                     insights.append(f"➡️ **{nivel_name}**: Crecimiento moderado del {data['variacion_pct']:+.1f}% - Mercado estable")
-                elif data["variacion_pct"] > -10:
+                elif data["variacion_pct"] > -10:  # Descenso leve
                     insights.append(f"⚠️ **{nivel_name}**: Descenso del {data['variacion_pct']:+.1f}% - Considerar especializacion en areas de alta demanda")
-                else:
+                else:  # Descenso significativo
                     insights.append(f"🔴 **{nivel_name}**: Descenso significativo del {data['variacion_pct']:+.1f}% - Buscar capacitacion en nuevas tecnologias")
 
-            for insight in insights:
+            for insight in insights:  # Muestra cada insight en tarjeta
                 st.markdown(f"""<div class='feature-card' style='padding:0.8rem 1.2rem;margin:0.4rem 0;'>
                     <p style='margin:0;'>{insight}</p>
                 </div>""", unsafe_allow_html=True)
 
-            st.divider()
+            st.divider()  # Linea divisora
+            # Renderiza analisis del sector TICs al final
             _render_tics_analysis(qual_df, qual_summary, c, accent)
 
-        return
+        return  # Termina despues de analizar archivo SENA
 
+    # Si no hay datos, sale
     if df is None or df.empty:
         return
 
+    # === SECCION: Preparacion de columnas para archivos genericos ===
+    # Asegura que existan todas las columnas necesarias para el analisis
     if "ciudad" not in df.columns and "ubicacion" in df.columns:
-        df["ciudad"] = df["ubicacion"].apply(extract_ciudad)
+        df["ciudad"] = df["ubicacion"].apply(extract_ciudad)  # Extrae ciudad de ubicacion
     elif "ciudad" not in df.columns:
-        df["ciudad"] = "Medellin"
+        df["ciudad"] = "Medellin"  # Valor por defecto
     if "role_categoria" not in df.columns:
+        # Identifica categoria de rol desde titulo y descripcion
         titulo_col = "titulo" if "titulo" in df.columns else "occupation" if "occupation" in df.columns else df.columns[0]
         desc_col = "descripcion" if "descripcion" in df.columns else "description" if "description" in df.columns else ""
         if desc_col:
@@ -2532,6 +2641,7 @@ def render_executive_report(cfg, scraper, cleaner, repo, model):
         else:
             df["role_categoria"] = df[titulo_col].apply(lambda x: identify_role_category(str(x)))
     if "salario_promedio" not in df.columns:
+        # Calcula salario promedio desde minimo y maximo
         sal_min_col = "salario_minimo" if "salario_minimo" in df.columns else "salary_min" if "salary_min" in df.columns else None
         sal_max_col = "salario_maximo" if "salario_maximo" in df.columns else "salary_max" if "salary_max" in df.columns else None
         if sal_min_col and sal_max_col:
@@ -2544,9 +2654,11 @@ def render_executive_report(cfg, scraper, cleaner, repo, model):
             df["salario_minimo"] = 0
             df["salario_maximo"] = 0
     if "cargo_nivel" not in df.columns:
+        # Identifica nivel de cargo desde titulo
         titulo_col = "titulo" if "titulo" in df.columns else "occupation" if "occupation" in df.columns else df.columns[0]
         df["cargo_nivel"] = df[titulo_col].fillna("").apply(lambda x: identify_cargo_level(str(x)))
     if "modalidad_clean" not in df.columns:
+        # Identifica modalidad laboral (presencial/remoto/hibrido)
         modalidad_col = "modalidad" if "modalidad" in df.columns else "work_mode" if "work_mode" in df.columns else None
         if modalidad_col:
             df["modalidad_clean"] = df[modalidad_col].fillna("").apply(lambda x: identify_modalidad(str(x)))
@@ -2555,6 +2667,7 @@ def render_executive_report(cfg, scraper, cleaner, repo, model):
         else:
             df["modalidad_clean"] = "presencial"
     if "skills_str" not in df.columns:
+        # Extrae skills como string
         if "skills" in df.columns:
             df["skills_str"] = df["skills"].fillna("")
         elif "descripcion" in df.columns:
@@ -2564,127 +2677,144 @@ def render_executive_report(cfg, scraper, cleaner, repo, model):
         else:
             df["skills_str"] = ""
     if "experiencia_requerida" not in df.columns:
-        df["experiencia_requerida"] = 0
+        df["experiencia_requerida"] = 0  # Valor por defecto
     if "num_skills" not in df.columns:
+        # Cuenta numero de skills por oferta
         df["num_skills"] = df["skills_str"].apply(lambda x: len(str(x).split(",")) if x else 0)
 
-    st.divider()
+    st.divider()  # Linea divisora
 
+    # === SECCION: Seleccion de ocupaciones SENA ===
     st.markdown(f"<h2 style='color:{c["on_surface"]};'>🎯 Seleccion de Ocupaciones SENA</h2>", unsafe_allow_html=True)
+    # Tarjeta informativa sobre catalogo CNO/CUOC
     st.markdown(f"""<div class='feature-card' style='padding:1rem;margin-bottom:1rem;border-left:4px solid {accent};'>
         <p style='margin:0;font-size:0.9rem;'><strong>Catalogo CNO/CUOC del SENA:</strong> Selecciona las categorias ocupacionales que desea analizar.
         La red neuronal usara estas categorias para filtrar y analizar los datos del archivo subido.</p>
     </div>""", unsafe_allow_html=True)
 
+    # Detecta columna de ocupacion en el archivo subido
     uploaded_occ_col = "occupation" if "occupation" in df.columns else "titulo" if "titulo" in df.columns else None
-    if uploaded_occ_col:
+    if uploaded_occ_col:  # Si hay columna de ocupacion
+        # Muestra conteo de ocupaciones coincidentes con catalogo SENA
         matched_counts = match_uploaded_data_to_sena(df[uploaded_occ_col])
-        if matched_counts:
+        if matched_counts:  # Si hay coincidencias
             st.markdown(f"<p style='color:{c['on_surface']};font-weight:600;'>📊 Ocupaciones encontradas en el archivo:</p>", unsafe_allow_html=True)
-            match_cols = st.columns(min(len(matched_counts), 4))
+            match_cols = st.columns(min(len(matched_counts), 4))  # Maximo 4 columnas
             for i, (cat, count) in enumerate(sorted(matched_counts.items(), key=lambda x: -x[1])):
                 with match_cols[i % min(len(matched_counts), 4)]:
-                    st.metric(label=cat, value=f"{count} registros")
+                    st.metric(label=cat, value=f"{count} registros")  # Muestra conteo por categoria
 
+    # Selector de categorias ocupacionales SENA
     st.markdown(f"<p style='color:{c['on_surface']};font-weight:600;margin-top:1rem;'>🔍 Selecciona categorias para filtrar el analisis:</p>", unsafe_allow_html=True)
-    categories = get_categories()
+    categories = get_categories()  # Obtiene categorias del catalogo SENA
     selected_categories = st.multiselect(
         "Categorias ocupacionales SENA",
         options=categories,
-        default=categories,
+        default=categories,  # Todas seleccionadas por defecto
         key="sena_categories",
         help="Selecciona las categorias que deseas incluir en el analisis. 'Todos' incluye todas las categorias.",
     )
 
-    if not selected_categories:
+    if not selected_categories:  # Si no selecciona ninguna, usa todas
         selected_categories = categories
 
+    # Obtiene ocupaciones recomendadas segun categorias seleccionadas
     recommended = get_recommended_occupations(selected_categories)
 
+    # Muestra ocupaciones recomendadas en expander
     with st.expander(f"📋 Ver ocupaciones recomendadas ({len(recommended)} denominaciones)", expanded=False):
-        for cat in selected_categories:
-            occs = get_occupations_by_category(cat)
+        for cat in selected_categories:  # Itera por cada categoria
+            occs = get_occupations_by_category(cat)  # Obtiene ocupaciones de la categoria
             if occs:
                 st.markdown(f"**{cat}:**")
-                for occ in occs[:5]:
+                for occ in occs[:5]:  # Muestra maximo 5 por categoria
                     st.markdown(f"  - {occ['nombre']} (CNO {occ['cno']})")
-                if len(occs) > 5:
+                if len(occs) > 5:  # Indica si hay mas
                     st.markdown(f"  _... y {len(occs)-5} mas_")
 
+    # Filtra datos segun ocupaciones seleccionadas
     if uploaded_occ_col:
+        # Crea mascara de filtro basada en ocupaciones recomendadas
         occupation_filter_mask = df[uploaded_occ_col].fillna("").apply(
             lambda x: any(rec.lower() in str(x).lower() for rec in recommended) if recommended else True
         )
-        filtered_count = occupation_filter_mask.sum()
+        filtered_count = occupation_filter_mask.sum()  # Cuenta registros que coinciden
         st.info(f"🔍 **{filtered_count} de {len(df)} registros** coinciden con las ocupaciones seleccionadas.")
 
-        if filtered_count > 0:
+        if filtered_count > 0:  # Si hay registros que coinciden
+            # Checkbox para aplicar filtro
             apply_filter = st.checkbox("✅ Aplicar filtro de ocupaciones al analisis", value=False, key="apply_occ_filter")
             if apply_filter:
-                df = df[occupation_filter_mask].copy()
+                df = df[occupation_filter_mask].copy()  # Aplica filtro al DataFrame
                 st.success(f"📊 Analisis filtrado: {len(df)} registros de ocupaciones seleccionadas.")
 
-    st.divider()
+    st.divider()  # Linea divisora
 
+    # === SECCION: Analisis con red neuronal ===
     st.markdown(f"<h2 style='color:{c["on_surface"]};'>🧠 Analisis con Red Neuronal</h2>", unsafe_allow_html=True)
 
-    analyzer = EmployabilityAnalyzer()
+    analyzer = EmployabilityAnalyzer()  # Crea instancia del analizador
 
+    # Entrena la red neuronal y analiza los datos
     with st.spinner("Entrenando red neuronal y analizando datos..."):
-        train_result = analyzer.train(df)
-        analysis = analyzer.analyze(df)
+        train_result = analyzer.train(df)  # Entrena MLPRegressor
+        analysis = analyzer.analyze(df)  # Analisis completo de empleabilidad
 
+    # Muestra resultado del entrenamiento
     if "error" in train_result:
         st.warning(f"⚠️ {train_result['error']}")
     else:
         st.success(f"✅ Red neuronal entrenada: R² = {train_result.get('r2_score', 0):.4f} ({train_result.get('samples', 0)} muestras)")
 
-    st.divider()
+    st.divider()  # Linea divisora
 
-    gen = analysis.get("resumen_general", {})
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
+    # === KPIs principales del analisis ===
+    gen = analysis.get("resumen_general", {})  # Resumen general del analisis
+    col1, col2, col3, col4 = st.columns(4)  # 4 columnas de KPIs
+    with col1:  # KPI: Total ofertas
         st.markdown(f"""<div class='metric-card'>
             <p style='color:{c['on_surface_variant']};margin:0;font-size:0.85rem;'>📋 Total Ofertas</p>
             <p style='font-size:1.8rem;font-weight:800;margin:0.2rem 0;color:{accent};'>{gen.get('total_ofertas', 0)}</p>
         </div>""", unsafe_allow_html=True)
-    with col2:
+    with col2:  # KPI: Salario promedio
         st.markdown(f"""<div class='metric-card'>
             <p style='color:{c['on_surface_variant']};margin:0;font-size:0.85rem;'>💰 Salario Promedio</p>
             <p style='font-size:1.8rem;font-weight:800;margin:0.2rem 0;color:{accent};'>${gen.get('salario_promedio', 0)/1e6:.2f}M</p>
         </div>""", unsafe_allow_html=True)
-    with col3:
+    with col3:  # KPI: Mediana salarial
         st.markdown(f"""<div class='metric-card'>
             <p style='color:{c['on_surface_variant']};margin:0;font-size:0.85rem;'>📊 Mediana Salarial</p>
             <p style='font-size:1.8rem;font-weight:800;margin:0.2rem 0;color:{accent};'>${gen.get('mediana_salario', 0)/1e6:.2f}M</p>
         </div>""", unsafe_allow_html=True)
-    with col4:
+    with col4:  # KPI: Roles distintos
         roles_count = len(analysis.get("roles_demanda", {}))
         st.markdown(f"""<div class='metric-card'>
             <p style='color:{c['on_surface_variant']};margin:0;font-size:0.85rem;'>🎯 Roles Distintos</p>
             <p style='font-size:1.8rem;font-weight:800;margin:0.2rem 0;color:{accent};'>{roles_count}</p>
         </div>""", unsafe_allow_html=True)
 
-    st.divider()
+    st.divider()  # Linea divisora
 
-    col_left, col_right = st.columns(2)
+    # === Graficos de distribucion por municipio ===
+    col_left, col_right = st.columns(2)  # 2 columnas para graficos
 
-    with col_left:
+    with col_left:  # Grafico de barras: ofertas por municipio
         st.markdown(f"<h3 style='color:{c["on_surface"]};'>🏙️ Distribucion por Municipio</h3>", unsafe_allow_html=True)
-        mun_data = analysis.get("distribucion_municipios", {})
+        mun_data = analysis.get("distribucion_municipios", {})  # Datos de distribucion
         if mun_data:
             import plotly.express as px
-            cities = list(mun_data.keys())
-            counts = [mun_data[c]["cantidad"] for c in cities]
-            pcts = [mun_data[c]["porcentaje"] for c in cities]
+            cities = list(mun_data.keys())  # Nombres de municipios
+            counts = [mun_data[c]["cantidad"] for c in cities]  # Cantidad de ofertas
+            pcts = [mun_data[c]["porcentaje"] for c in cities]  # Porcentajes
 
+            # Grafico de barras de ofertas por municipio
             fig_bar = px.bar(
                 x=cities,
                 y=counts,
                 labels={"x": "Municipio", "y": "Numero de Ofertas"},
-                text=[f"{p}%" for p in pcts],
+                text=[f"{p}%" for p in pcts],  # Etiquetas de porcentaje
                 color=counts,
-                color_continuous_scale=["#2557CC", "#4A90E2"],
+                color_continuous_scale=["#2557CC", "#4A90E2"],  # Azul
             )
             fig_bar.update_layout(
                 plot_bgcolor="rgba(0,0,0,0)",
@@ -2697,18 +2827,19 @@ def render_executive_report(cfg, scraper, cleaner, repo, model):
             )
             st.plotly_chart(fig_bar, use_container_width=True)
 
-    with col_right:
+    with col_right:  # Grafico de barras horizontales: salario por municipio
         st.markdown(f"<h3 style='color:{c["on_surface"]};'>💰 Analisis Salarial por Municipio</h3>", unsafe_allow_html=True)
-        sal_data = analysis.get("analisis_salarial", {})
+        sal_data = analysis.get("analisis_salarial", {})  # Datos salariales
         if sal_data:
             import plotly.express as px
-            cities = list(sal_data.keys())
-            avgs = [sal_data[c]["promedio"] / 1e6 for c in cities]
+            cities = list(sal_data.keys())  # Nombres de municipios
+            avgs = [sal_data[c]["promedio"] / 1e6 for c in cities]  # Salarios promedio en millones
 
+            # Grafico de barras horizontales de salario promedio
             fig_sal = px.bar(
                 x=avgs,
                 y=cities,
-                orientation="h",
+                orientation="h",  # Horizontal
                 labels={"x": "Salario Promedio (Millones COP)", "y": "Municipio"},
                 color=avgs,
                 color_continuous_scale=["#2557CC", "#4A90E2"],
@@ -2724,18 +2855,20 @@ def render_executive_report(cfg, scraper, cleaner, repo, model):
             )
             st.plotly_chart(fig_sal, use_container_width=True)
 
-    st.divider()
+    st.divider()  # Linea divisora
 
-    col_a, col_b, col_c = st.columns(3)
+    # === Graficos de pastel: roles, modalidad, nivel de cargo ===
+    col_a, col_b, col_c = st.columns(3)  # 3 columnas para graficos de pastel
 
-    with col_a:
+    with col_a:  # Grafico de pastel: roles mas demandados
         st.markdown(f"<h3 style='color:{c["on_surface"]};'>🎯 Roles Mas Demandados</h3>", unsafe_allow_html=True)
-        role_data = analysis.get("roles_demanda", {})
+        role_data = analysis.get("roles_demanda", {})  # Datos de demanda por rol
         if role_data:
             import plotly.express as px
-            roles = list(role_data.keys())
-            counts = [role_data[r]["cantidad"] for r in roles]
+            roles = list(role_data.keys())  # Nombres de roles
+            counts = [role_data[r]["cantidad"] for r in roles]  # Cantidad por rol
 
+            # Grafico de pastel de roles
             fig_role = px.pie(
                 values=counts,
                 names=roles,
@@ -2751,15 +2884,17 @@ def render_executive_report(cfg, scraper, cleaner, repo, model):
             fig_role.update_traces(textposition="inside", textinfo="percent+label")
             st.plotly_chart(fig_role, use_container_width=True)
 
-    with col_b:
+    with col_b:  # Grafico de pastel: modalidad laboral
         st.markdown(f"<h3 style='color:{c["on_surface"]};'>🏢 Modalidad Laboral</h3>", unsafe_allow_html=True)
-        mod_data = analysis.get("modalidad_tendencias", {})
+        mod_data = analysis.get("modalidad_tendencias", {})  # Datos de modalidad
         if mod_data:
             import plotly.express as px
+            # Labels legibles para modalidades
             mod_labels = {"presencial": "🏢 Presencial", "hibrido": "🔄 Hibrido", "remoto": "🏠 Remoto"}
             mods = [mod_labels.get(m, m) for m in mod_data.keys()]
             counts = [mod_data[m]["cantidad"] for m in mod_data.keys()]
 
+            # Grafico de pastel de modalidad
             fig_mod = px.pie(
                 values=counts,
                 names=mods,
@@ -2775,15 +2910,17 @@ def render_executive_report(cfg, scraper, cleaner, repo, model):
             fig_mod.update_traces(textposition="inside", textinfo="percent+label")
             st.plotly_chart(fig_mod, use_container_width=True)
 
-    with col_c:
+    with col_c:  # Grafico de pastel: nivel de cargo
         st.markdown(f"<h3 style='color:{c["on_surface"]};'>📊 Nivel de Cargo</h3>", unsafe_allow_html=True)
-        cargo_data = analysis.get("nivel_cargos", {})
+        cargo_data = analysis.get("nivel_cargos", {})  # Datos de nivel de cargo
         if cargo_data:
             import plotly.express as px
+            # Labels legibles para niveles de cargo
             cargo_labels = {"tecnico": "🔧 Tecnico", "tecnologo": "💻 Tecnologo", "ingeniero": "⚙️ Ingeniero", "senior": "🏆 Senior"}
             cargos = [cargo_labels.get(c_, c_) for c_ in cargo_data.keys()]
             counts = [cargo_data[c_]["cantidad"] for c_ in cargo_data.keys()]
 
+            # Grafico de pastel de nivel de cargo
             fig_cargo = px.pie(
                 values=counts,
                 names=cargos,
@@ -2799,15 +2936,17 @@ def render_executive_report(cfg, scraper, cleaner, repo, model):
             fig_cargo.update_traces(textposition="inside", textinfo="percent+label")
             st.plotly_chart(fig_cargo, use_container_width=True)
 
-    st.divider()
+    st.divider()  # Linea divisora
 
-    skills_data = analysis.get("habilidades_demandadas", {})
+    # === Grafico de barras: habilidades mas demandadas ===
+    skills_data = analysis.get("habilidades_demandadas", {})  # Datos de habilidades
     if skills_data:
         st.markdown(f"<h3 style='color:{c["on_surface"]};'>🛠️ Habilidades Mas Demandadas</h3>", unsafe_allow_html=True)
         import plotly.express as px
-        skills = list(skills_data.keys())[:10]
+        skills = list(skills_data.keys())[:10]  # Top 10 habilidades
         counts = [skills_data[s]["cantidad"] for s in skills]
 
+        # Grafico de barras horizontales de habilidades
         fig_skills = px.bar(
             x=counts,
             y=skills,
@@ -2827,14 +2966,15 @@ def render_executive_report(cfg, scraper, cleaner, repo, model):
         )
         st.plotly_chart(fig_skills, use_container_width=True)
 
-    st.divider()
+    st.divider()  # Linea divisora
 
-    opportunities = analysis.get("oportunidades_empleabilidad", {})
+    # === Tarjetas de oportunidades de empleabilidad ===
+    opportunities = analysis.get("oportunidades_empleabilidad", {})  # Oportunidades identificadas
     if opportunities:
         st.markdown(f"<h3 style='color:{c["on_surface"]};'>💡 Oportunidades de Empleabilidad</h3>", unsafe_allow_html=True)
-        col_op1, col_op2, col_op3 = st.columns(3)
+        col_op1, col_op2, col_op3 = st.columns(3)  # 3 columnas de oportunidades
 
-        with col_op1:
+        with col_op1:  # Alta demanda
             st.markdown(f"""<div class='feature-card' style='padding:1rem;'>
                 <p style='font-weight:700;color:{accent};margin:0 0 0.5rem;'>🔥 Alta Demanda</p>
                 <ul style='margin:0;padding-left:1.2rem;font-size:0.9rem;'>
@@ -2842,7 +2982,7 @@ def render_executive_report(cfg, scraper, cleaner, repo, model):
                 </ul>
             </div>""", unsafe_allow_html=True)
 
-        with col_op2:
+        with col_op2:  # Mejor pagados
             st.markdown(f"""<div class='feature-card' style='padding:1rem;'>
                 <p style='font-weight:700;color:{accent};margin:0 0 0.5rem;'>💰 Mejor Pagados</p>
                 <ul style='margin:0;padding-left:1.2rem;font-size:0.9rem;'>
@@ -2850,7 +2990,7 @@ def render_executive_report(cfg, scraper, cleaner, repo, model):
                 </ul>
             </div>""", unsafe_allow_html=True)
 
-        with col_op3:
+        with col_op3:  # En crecimiento
             st.markdown(f"""<div class='feature-card' style='padding:1rem;'>
                 <p style='font-weight:700;color:{accent};margin:0 0 0.5rem;'>📈 En Crecimiento</p>
                 <ul style='margin:0;padding-left:1.2rem;font-size:0.9rem;'>
@@ -2858,23 +2998,25 @@ def render_executive_report(cfg, scraper, cleaner, repo, model):
                 </ul>
             </div>""", unsafe_allow_html=True)
 
-    st.divider()
+    st.divider()  # Linea divisora
 
-    recommendations = analysis.get("recomendaciones", [])
+    # === Lista de recomendaciones ===
+    recommendations = analysis.get("recomendaciones", [])  # Recomendaciones del analisis
     if recommendations:
         st.markdown(f"<h3 style='color:{c["on_surface"]};'>📋 Recomendaciones</h3>", unsafe_allow_html=True)
-        for i, rec in enumerate(recommendations, 1):
+        for i, rec in enumerate(recommendations, 1):  # Numera cada recomendacion
             st.markdown(f"""<div class='feature-card' style='padding:1rem;margin:0.5rem 0;'>
                 <p style='margin:0;'><strong>{i}.</strong> {rec}</p>
             </div>""", unsafe_allow_html=True)
 
-    st.divider()
+    st.divider()  # Linea divisora
 
+    # === Botones de exportacion ===
     st.markdown(f"<h3 style='color:{c["on_surface"]};'>📥 Exportar Informe</h3>", unsafe_allow_html=True)
-    col_exp1, col_exp2 = st.columns(2)
+    col_exp1, col_exp2 = st.columns(2)  # 2 columnas de exportacion
 
-    with col_exp1:
-        report_text = analyzer.get_summary_text()
+    with col_exp1:  # Exportar informe TXT
+        report_text = analyzer.get_summary_text()  # Obtiene resumen en texto plano
         st.download_button(
             label="📄 Descargar Informe TXT",
             data=report_text,
@@ -2883,7 +3025,7 @@ def render_executive_report(cfg, scraper, cleaner, repo, model):
             use_container_width=True,
         )
 
-    with col_exp2:
+    with col_exp2:  # Exportar datos procesados CSV
         csv_data = df.to_csv(index=False, encoding="utf-8")
         st.download_button(
             label="📊 Descargar Datos Procesados CSV",
@@ -2893,161 +3035,191 @@ def render_executive_report(cfg, scraper, cleaner, repo, model):
             use_container_width=True,
         )
 
-    st.divider()
+    st.divider()  # Linea divisora
+    # Pie de pagina con fecha y fuente
     src = st.session_state.get("data_source", "—")
     st.markdown(f"<p class='info-text'>📅 Informe generado: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')} · Fuente: {src}</p>",
                 unsafe_allow_html=True)
 
 
 def render_agent_panel():
-    """Pertinence Laboral analysis panel."""
-    if "agent_step" not in st.session_state:
-        st.session_state.agent_step = 0
-    if "agent_data" not in st.session_state:
-        st.session_state.agent_data = {}
+    """Renderiza el panel de Agente de Pertinencia Laboral.
 
+    Wizard de 4 pasos que genera informes ejecutivos para el Registro Calificado
+    de programas academicos colombianos, siguiendo los criterios del Consejo
+    Nacional de Acreditacion (CNA). Usa Groq API (llama-3.3-70b-versatile) para
+    generar informes con IA, o fallback a informe base cuando no hay API key.
+
+    Pasos del wizard:
+        0. Seleccion de programa academico
+        1. Tipo de informe (Pertinencia, Seguimiento, Diagnostico)
+        2. Parametros (departamento, anio, fuentes)
+        3. Generacion del informe (IA o base)
+    """
+    # Inicializa estado del wizard en session_state
+    if "agent_step" not in st.session_state:
+        st.session_state.agent_step = 0  # Paso actual del wizard
+    if "agent_data" not in st.session_state:
+        st.session_state.agent_data = {}  # Datos recolectados en cada paso
+
+    # Header del panel con gradiente azul
     st.markdown("""
     <div style="background:linear-gradient(135deg,#2557CC,#1B3F8B);padding:1.2rem;border-radius:12px;margin-bottom:1rem;border:1px solid rgba(74,144,226,0.3);">
         <div style="display:flex;align-items:center;gap:0.8rem;">
             <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:1.4rem;">📋</div>
             <div>
                 <p style="margin:0;color:#fff;font-size:1.1rem;font-weight:700;">Agente de Pertinencia Laboral</p>
-                <p style="margin:0;color:#B0C4DE;font-size:0.8rem;">Registro Calificado · CNA · Ministerio de Educación</p>
+                <p style="margin:0;color:#B0C4DE;font-size:0.8rem;">Registro Calificado · CNA · Ministerio de Educacion</p>
             </div>
         </div>
     </div>""", unsafe_allow_html=True)
 
-    steps_done = st.session_state.agent_step
-    step_labels = ["Programa", "Tipo Informe", "Parámetros", "Generar"]
-    cols = st.columns(4)
+    # Indicador de progreso del wizard (4 pasos)
+    steps_done = st.session_state.agent_step  # Pasos completados
+    step_labels = ["Programa", "Tipo Informe", "Parametros", "Generar"]  # Nombres de cada paso
+    cols = st.columns(4)  # 4 columnas para indicadores
     for i, (col, label) in enumerate(zip(cols, step_labels)):
         with col:
-            if i < steps_done:
+            if i < steps_done:  # Paso completado (check verde)
                 st.markdown(f"<p style='text-align:center;color:#059669;font-size:0.75rem;margin:0;'>✅ {label}</p>", unsafe_allow_html=True)
-            elif i == steps_done:
+            elif i == steps_done:  # Paso actual (flecha azul)
                 st.markdown(f"<p style='text-align:center;color:#4A90E2;font-size:0.75rem;margin:0;font-weight:700;'>➡️ {label}</p>", unsafe_allow_html=True)
-            else:
+            else:  # Paso pendiente (cuadro gris)
                 st.markdown(f"<p style='text-align:center;color:#6b7a76;font-size:0.75rem;margin:0;'>⬜ {label}</p>", unsafe_allow_html=True)
-    st.divider()
+    st.divider()  # Linea divisora
 
+    # === PASO 0: Seleccion de programa academico ===
     if st.session_state.agent_step == 0:
         st.markdown("##### 👋 Bienvenido al Agente de Pertinencia Laboral")
-        st.markdown("Genero informes ejecutivos para el **Registro Calificado** de programas académicos colombianos, siguiendo los criterios del **Consejo Nacional de Acreditación (CNA)**.")
+        st.markdown("Genero informes ejecutivos para el **Registro Calificado** de programas academicos colombianos, siguiendo los criterios del **Consejo Nacional de Acreditacion (CNA)**.")
+        # Selector de programa academico
         programa = st.selectbox(
-            "¿Qué programa académico deseas evaluar?",
+            "¿Que programa academico deseas evaluar?",
             ["Selecciona un programa...",
-             "Ingeniería de Sistemas", "Ingeniería de Software",
-             "Ingeniería Electrónica", "Ingeniería de Telecomunicaciones",
-             "Tecnología en Desarrollo de Software",
-             "Tecnología en Redes y Telecomunicaciones",
-             "Administración de Empresas", "Contaduría Pública",
-             "Derecho", "Medicina", "Psicología", "Comunicación Social"],
+             "Ingenieria de Sistemas", "Ingenieria de Software",
+             "Ingenieria Electronica", "Ingenieria de Telecomunicaciones",
+             "Tecnologia en Desarrollo de Software",
+             "Tecnologia en Redes y Telecomunicaciones",
+             "Administracion de Empresas", "Contaduria Publica",
+             "Derecho", "Medicina", "Psicologia", "Comunicacion Social"],
             key="agent_programa",
         )
+        # Avanza al paso 1 si selecciona un programa
         if programa != "Selecciona un programa..." and st.button("Siguiente →", key="btn_step0", type="primary"):
-            st.session_state.agent_data["programa"] = programa
-            st.session_state.agent_step = 1
-            st.rerun()
+            st.session_state.agent_data["programa"] = programa  # Guarda programa
+            st.session_state.agent_step = 1  # Avanza al paso 1
+            st.rerun()  # Re-renderiza el wizard
 
+    # === PASO 1: Tipo de informe ===
     elif st.session_state.agent_step == 1:
         st.markdown(f"##### 📋 Programa: **{st.session_state.agent_data['programa']}**")
+        # Radio para seleccionar tipo de informe
         tipo = st.radio(
             "Tipo de informe:",
             ["📊 Estudio de Pertinencia Laboral",
              "📈 Seguimiento a Graduados (OLE)",
-             "🔍 Diagnóstico de Tendencias Sectoriales"],
+             "🔍 Diagnostico de Tendencias Sectoriales"],
             key="agent_tipo",
         )
-        c1, c2 = st.columns(2)
+        c1, c2 = st.columns(2)  # 2 columnas: Atras y Siguiente
         with c1:
-            if st.button("← Atrás", key="btn_back1"):
-                st.session_state.agent_step = 0
+            if st.button("← Atras", key="btn_back1"):
+                st.session_state.agent_step = 0  # Retrocede al paso 0
                 st.rerun()
         with c2:
             if st.button("Siguiente →", key="btn_step1", type="primary"):
-                st.session_state.agent_data["tipo_informe"] = tipo
-                st.session_state.agent_step = 2
+                st.session_state.agent_data["tipo_informe"] = tipo  # Guarda tipo
+                st.session_state.agent_step = 2  # Avanza al paso 2
                 st.rerun()
 
+    # === PASO 2: Parametros de configuracion ===
     elif st.session_state.agent_step == 2:
         st.markdown(f"##### ⚙️ Configurar: {st.session_state.agent_data['tipo_informe']}")
+        # Selector de departamento
         departamento = st.selectbox(
-            "Departamento/Región:",
-            ["Antioquia", "Bogotá D.C.", "Valle del Cauca", "Atlántico",
-             "Santander", "Bolívar", "Cundinamarca", "Tolima", "Nariño", "Otros"],
+            "Departamento/Region:",
+            ["Antioquia", "Bogota D.C.", "Valle del Cauca", "Atlantico",
+             "Santander", "Bolivar", "Cundinamarca", "Tolima", "Narino", "Otros"],
             key="agent_depto",
         )
-        c1, c2 = st.columns(2)
+        c1, c2 = st.columns(2)  # 2 columnas: anio inicio y fin
         with c1:
-            anio_inicio = st.selectbox("Año inicio:", list(range(2021, 2027)), index=0, key="agent_y1")
+            anio_inicio = st.selectbox("Anio inicio:", list(range(2021, 2027)), index=0, key="agent_y1")
         with c2:
-            anio_fin = st.selectbox("Año fin:", list(range(2021, 2027)), index=5, key="agent_y2")
+            anio_fin = st.selectbox("Anio fin:", list(range(2021, 2027)), index=5, key="agent_y2")
+        # Selector de fuentes de datos
         fuentes = st.multiselect(
             "Fuentes de datos:",
             ["Elempleo.com", "CompuTrabajo", "LinkedIn", "Observatorio Laboral (MEN)",
-             "DAE (MinEducación)", "SENA", "Superintendencia de Sociedades"],
-            default=["Elempleo.com", "Observatorio Laboral (MEN)", "DAE (MinEducación)"],
+             "DAE (MinEducacion)", "SENA", "Superintendencia de Sociedades"],
+            default=["Elempleo.com", "Observatorio Laboral (MEN)", "DAE (MinEducacion)"],
             key="agent_fuentes",
         )
-        c1, c2 = st.columns(2)
+        c1, c2 = st.columns(2)  # 2 columnas: Atras y Generar
         with c1:
-            if st.button("← Atrás", key="btn_back2"):
-                st.session_state.agent_step = 1
+            if st.button("← Atras", key="btn_back2"):
+                st.session_state.agent_step = 1  # Retrocede al paso 1
                 st.rerun()
         with c2:
             if st.button("🚀 Generar Informe", key="btn_step2", type="primary"):
+                # Guarda todos los parametros del paso 2
                 st.session_state.agent_data.update({
                     "departamento": departamento, "anio_inicio": anio_inicio,
                     "anio_fin": anio_fin, "fuentes": fuentes,
                 })
-                st.session_state.agent_step = 3
+                st.session_state.agent_step = 3  # Avanza al paso 3
                 st.rerun()
 
+    # === PASO 3: Generacion del informe ===
     elif st.session_state.agent_step == 3:
-        from src.utils.report_generator import generate_report, generate_report_offline
+        from src.utils.report_generator import generate_report, generate_report_offline  # Generadores de informe
 
-        d = st.session_state.agent_data
+        d = st.session_state.agent_data  # Datos recolectados en pasos anteriores
+        # Resumen de parametros en tabla Markdown
         st.markdown("##### 📄 Resumen del Informe")
         st.markdown(f"""
-        | Parámetro | Valor |
+        | Parametro | Valor |
         |-----------|-------|
         | **Programa** | {d['programa']} |
         | **Tipo** | {d['tipo_informe']} |
-        | **Región** | {d['departamento']} |
-        | **Período** | {d['anio_inicio']} – {d['anio_fin']} |
+        | **Region** | {d['departamento']} |
+        | **Periodo** | {d['anio_inicio']} – {d['anio_fin']} |
         | **Fuentes** | {', '.join(d['fuentes'])} |
         """)
 
-        from src.utils.environment import get_groq_key
+        from src.utils.environment import get_groq_key  # Obtiene API key de Groq
         groq_key = get_groq_key()
 
-        if groq_key:
+        if groq_key:  # Si hay API key configurada
+            # Boton para generar informe con IA (Groq API)
             if st.button("🚀 Generar Informe con IA", type="primary", key="btn_gen_report"):
                 with st.spinner("Generando informe con Groq AI..."):
-                    report = generate_report(d, groq_key)
-                if report:
-                    st.session_state.agent_report = report
+                    report = generate_report(d, groq_key)  # Llama a Groq API
+                if report:  # Si genero exitosamente
+                    st.session_state.agent_report = report  # Guarda informe
                     st.success("✅ Informe generado exitosamente con IA")
-                else:
+                else:  # Si fallo, genera informe base
                     from src.utils.report_generator import generate_report_offline
                     report = generate_report_offline(d)
                     st.session_state.agent_report = report
                     st.warning("⚠️ Groq API no disponible. Informe generado con datos base.")
-        else:
+        else:  # No hay API key: solo informe base
             if st.button("📄 Generar Informe Base", type="primary", key="btn_gen_report_offline"):
                 from src.utils.report_generator import generate_report_offline
                 report = generate_report_offline(d)
                 st.session_state.agent_report = report
                 st.info("📄 Informe generado con datos base (configura GROQ_API_KEY para informes con IA)")
 
+        # Muestra informe si existe
         if st.session_state.get("agent_report"):
             report = st.session_state.agent_report
             st.divider()
-            st.markdown(report)
+            st.markdown(report)  # Renderiza Markdown del informe
 
+            # Botones de descarga en 3 formatos
             st.divider()
-            c1, c2, c3 = st.columns(3)
-            with c1:
+            c1, c2, c3 = st.columns(3)  # 3 columnas: MD, TXT, PDF
+            with c1:  # Descargar como Markdown
                 st.download_button(
                     "📥 Descargar Informe .md",
                     data=report,
@@ -3055,7 +3227,7 @@ def render_agent_panel():
                     mime="text/markdown",
                     use_container_width=True,
                 )
-            with c2:
+            with c2:  # Descargar como TXT
                 st.download_button(
                     "📥 Descargar Informe .txt",
                     data=report,
@@ -3063,7 +3235,7 @@ def render_agent_panel():
                     mime="text/plain",
                     use_container_width=True,
                 )
-            with c3:
+            with c3:  # Descargar como PDF (generado con reportlab)
                 from src.utils.pdf_generator import generate_pertinencia_pdf
                 pdf_bytes = generate_pertinencia_pdf(
                     program_name=d["programa"],
@@ -3080,31 +3252,33 @@ def render_agent_panel():
                     mime="application/pdf",
                     use_container_width=True,
                 )
-        else:
+        else:  # No hay informe generado aun: muestra instrucciones de configuracion
             st.info("""
             **💡 API Gratuita para generar informes:**
 
-            **Groq API** — Gratis, sin tarjeta de crédito, respuesta instantánea.
+            **Groq API** — Gratis, sin tarjeta de credito, respuesta instantanea.
 
-            **Cómo configurar (5 minutos):**
+            **Como configurar (5 minutos):**
             1. Ve a [console.groq.com](https://console.groq.com)
             2. Crea una cuenta gratuita
             3. Ve a **API Keys** → **Create API Key**
             4. Copia la key
-            5. Agrégala en Streamlit Cloud → Settings → Secrets:
+            5. Agregala en Streamlit Cloud → Settings → Secrets:
             ```
             GROQ_API_KEY=gsk_tu_key_aqui
             ```
             6. Reinicia la app
 
-            **Una vez configurada**, presiona **Generar Informe con IA** y recibirás un informe completo listo para el Registro Calificado CNA.
+            **Una vez configurada**, presiona **Generar Informe con IA** y recibiras un informe completo listo para el Registro Calificado CNA.
             """)
 
+            # Boton de informe base (sin IA) como alternativa
             if st.button("📄 Generar Informe Base (sin IA)", key="btn_gen_offline"):
                 report = generate_report_offline(d)
                 st.session_state.agent_report = report
                 st.rerun()
 
+            # Muestra informe base si se genero
             if st.session_state.get("agent_report"):
                 report = st.session_state.agent_report
                 st.divider()
@@ -3115,21 +3289,23 @@ def render_agent_panel():
                     data=report,
                     file_name=f"informe_{d['programa'].replace(' ', '_')}_{d['anio_fin']}.md",
                     mime="text/markdown",
-                    use_container_width=True,
                 )
 
+        # Navegacion: Atras y Nuevo informe
         c1, c2 = st.columns(2)
         with c1:
-            if st.button("← Atrás", key="btn_back3"):
-                st.session_state.agent_step = 2
+            if st.button("← Atras", key="btn_back3"):
+                st.session_state.agent_step = 2  # Retrocede al paso 2
                 st.rerun()
         with c2:
             if st.button("🔄 Nuevo informe", key="btn_new"):
+                # Resetea todo el wizard
                 st.session_state.agent_step = 0
                 st.session_state.agent_data = {}
                 st.session_state.agent_report = ""
                 st.rerun()
 
 
+# Punto de entrada de la aplicacion Streamlit
 if __name__ == "__main__":
-    main()
+    main()  # Ejecuta la funcion principal
