@@ -198,281 +198,289 @@ def render_theme_css():
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("""
+st.markdown("""  # Inyecta HTML de burbujas animadas de fondo
 <div class="bubbles">
-    <div class="bubble"></div>
-    <div class="bubble"></div>
-    <div class="bubble"></div>
-    <div class="bubble"></div>
-    <div class="bubble"></div>
-    <div class="bubble"></div>
-    <div class="bubble"></div>
-    <div class="bubble"></div>
-    <div class="bubble"></div>
-    <div class="bubble"></div>
-    <div class="bubble"></div>
-    <div class="bubble"></div>
+    <div class="bubble"></div>  <!-- Burbuja 1 -->
+    <div class="bubble"></div>  <!-- Burbuja 2 -->
+    <div class="bubble"></div>  <!-- Burbuja 3 -->
+    <div class="bubble"></div>  <!-- Burbuja 4 -->
+    <div class="bubble"></div>  <!-- Burbuja 5 -->
+    <div class="bubble"></div>  <!-- Burbuja 6 -->
+    <div class="bubble"></div>  <!-- Burbuja 7 -->
+    <div class="bubble"></div>  <!-- Burbuja 8 -->
+    <div class="bubble"></div>  <!-- Burbuja 9 -->
+    <div class="bubble"></div>  <!-- Burbuja 10 -->
+    <div class="bubble"></div>  <!-- Burbuja 11 -->
+    <div class="bubble"></div>  <!-- Burbuja 12 -->
 </div>
-""", unsafe_allow_html=True)
+""", unsafe_allow_html=True)  # Permite HTML personalizado en Streamlit
 
 
-MEDELLIN_ALIASES = {
-    "medellín": "Medellín", "medellin": "Medellín", "medallo": "Medellín",
-    "bello": "Bello",
-    "itagüí": "Itagüí", "itagui": "Itagüí",
-    "envigado": "Envigado",
-    "sabaneta": "Sabaneta",
-    "la estrella": "La Estrella",
-    "caldas": "Caldas",
-    "copacabana": "Copacabana",
-    "girardota": "Girardota",
-    "barbosa": "Barbosa",
-    "donmatías": "Donmatías", "donmatias": "Donmatías",
-    "santa rosa de osos": "Santa Rosa de Osos",
-    "san pedro de los milagros": "San Pedro de los Milagros",
-    "san cristóbal": "San Cristóbal", "san cristobal": "San Cristóbal",
-    "la ceja del tambo": "La Ceja del Tambo", "la ceja": "La Ceja del Tambo",
-    "carmen de viboral": "Carmen de Viboral",
-    "rionegro": "Rionegro",
-    "marinilla": "Marinilla",
-    "guatapé": "Guatapé", "guatape": "Guatapé",
+MEDELLIN_ALIASES = {  # Diccionario de alias para normalizar nombres de ciudades del AMVA
+    "medellín": "Medellín", "medellin": "Medellín", "medallo": "Medellín",  # Alias de Medellín
+    "bello": "Bello",  # Bello
+    "itagüí": "Itagüí", "itagui": "Itagüí",  # Itagüí
+    "envigado": "Envigado",  # Envigado
+    "sabaneta": "Sabaneta",  # Sabaneta
+    "la estrella": "La Estrella",  # La Estrella
+    "caldas": "Caldas",  # Caldas
+    "copacabana": "Copacabana",  # Copacabana
+    "girardota": "Girardota",  # Girardota
+    "barbosa": "Barbosa",  # Barbosa
+    "donmatías": "Donmatías", "donmatias": "Donmatías",  # Donmatías
+    "santa rosa de osos": "Santa Rosa de Osos",  # Santa Rosa de Osos
+    "san pedro de los milagros": "San Pedro de los Milagros",  # San Pedro de los Milagros
+    "san cristóbal": "San Cristóbal", "san cristobal": "San Cristóbal",  # San Cristóbal
+    "la ceja del tambo": "La Ceja del Tambo", "la ceja": "La Ceja del Tambo",  # La Ceja
+    "carmen de viboral": "Carmen de Viboral",  # Carmen de Viboral
+    "rionegro": "Rionegro",  # Rionegro
+    "marinilla": "Marinilla",  # Marinilla
+    "guatapé": "Guatapé", "guatape": "Guatapé",  # Guatapé
 }
 
 
 def extract_ciudad(ubicacion: str) -> str:
-    if not ubicacion or not isinstance(ubicacion, str):
-        return "Medellín"
-    u = ubicacion.lower().strip()
-    for alias, canonical in MEDELLIN_ALIASES.items():
-        if alias in u:
-            return canonical
-    if "," in u:
-        parts = [p.strip() for p in u.split(",")]
-        for p in parts:
-            p_lower = p.lower()
-            for alias in MEDELLIN_ALIASES:
-                if alias in p_lower:
-                    return MEDELLIN_ALIASES[alias]
-        return parts[0].title()
-    return u.title()
+    """Extrae y normaliza el nombre de la ciudad desde una cadena de ubicación."""
+    if not ubicacion or not isinstance(ubicacion, str):  # Si no hay ubicación o no es string
+        return "Medellín"  # Default: Medellín
+    u = ubicacion.lower().strip()  # Convierte a minúsculas y quita espacios
+    for alias, canonical in MEDELLIN_ALIASES.items():  # Busca alias en el diccionario
+        if alias in u:  # Si encuentra el alias
+            return canonical  # Retorna nombre canónico
+    if "," in u:  # Si tiene comas (ej: "Medellín, Colombia")
+        parts = [p.strip() for p in u.split(",")]  # Divide por comas
+        for p in parts:  # Itera cada parte
+            p_lower = p.lower()  # Convierte a minúsculas
+            for alias in MEDELLIN_ALIASES:  # Busca alias
+                if alias in p_lower:  # Si encuentra
+                    return MEDELLIN_ALIASES[alias]  # Retorna nombre canónico
+        return parts[0].title()  # Si no encuentra alias, retorna primera parte capitalizada
+    return u.title()  # Retorna texto capitalizado
 
 
-@st.cache_resource
+@st.cache_resource  # Decorador de Streamlit: cachea el resultado (se ejecuta solo una vez)
 def init_components():
-    from src.models.model_factory import ModelFactory
-    from src.scraper.scraper_factory import ScraperFactory
-    cfg = Config()
-    scraper = ScraperFactory.create_with_fallback(headless=True, timeout=45)
-    cleaner = DataCleaner()
-    repo = DataRepository(cfg.RAW_DATA_DIR, cfg.PROCESSED_DATA_DIR)
-    model = ModelFactory.create("RandomForest")
-    return cfg, scraper, cleaner, repo, model
+    """Inicializa y cachea todos los componentes del sistema (config, scraper, cleaner, repo, model)."""
+    from src.models.model_factory import ModelFactory  # Fábrica de modelos ML
+    from src.scraper.scraper_factory import ScraperFactory  # Fábrica de scrapers
+    cfg = Config()  # Carga configuración centralizada (Singleton)
+    scraper = ScraperFactory.create_with_fallback(headless=True, timeout=45)  # Crea scraper con fallback automático
+    cleaner = DataCleaner()  # Crea pipeline de limpieza ETL
+    repo = DataRepository(cfg.RAW_DATA_DIR, cfg.PROCESSED_DATA_DIR)  # Crea repositorio de datos
+    model = ModelFactory.create("RandomForest")  # Crea modelo RandomForest
+    return cfg, scraper, cleaner, repo, model  # Retorna los 5 componentes
 
 
 def _add_derived_columns(df: pd.DataFrame) -> pd.DataFrame:
-    if "ciudad" not in df.columns:
-        df["ciudad"] = df["ubicacion"].apply(extract_ciudad)
-    if "role_categoria" not in df.columns:
-        df["role_categoria"] = df.apply(
+    """Agrega columnas derivadas: ciudad (desde ubicación) y role_categoria (desde título)."""
+    if "ciudad" not in df.columns:  # Si no existe columna ciudad
+        df["ciudad"] = df["ubicacion"].apply(extract_ciudad)  # Extrae ciudad de ubicación
+    if "role_categoria" not in df.columns:  # Si no existe columna role_categoria
+        df["role_categoria"] = df.apply(  # Identifica categoría del rol
             lambda r: identify_role_category(r.get("titulo", ""), r.get("descripcion", "")), axis=1
         )
-    return df
+    return df  # Retorna DataFrame con columnas derivadas
 
 
-SCRAPE_TIMEOUT = 45
-AUTOREFRESH_INTERVAL = 300  # 5 minutes
+SCRAPE_TIMEOUT = 45  # Timeout del scraping en segundos
+AUTOREFRESH_INTERVAL = 300  # Intervalo de auto-refresh: 300 segundos = 5 minutos
 
 
 def load_or_fetch_data(cfg, scraper, cleaner, repo):
-    force_fresh = st.session_state.pop("force_refresh", False)
+    """Carga datos desde cache o ejecuta scraping real. Prioriza datos reales."""
+    force_fresh = st.session_state.pop("force_refresh", False)  # Obtiene flag de refresh forzado
 
-    if not force_fresh:
-        processed = repo.load_processed()
-        if processed is not None and len(processed) >= 20:
-            logger.info("Using cached processed dataset")
-            df = _add_derived_columns(processed)
-            st.session_state.data_source = "💾 Datos reales (cache)"
-            st.session_state.last_update = datetime.datetime.now()
-            return df
-        raw_files = repo.list_raw_files()
-        if raw_files:
-            latest = raw_files[-1]
-            raw_df = repo.load_raw(latest.name)
-            if raw_df is not None and len(raw_df) >= 20:
-                df = cleaner.clean(raw_df.to_dict("records"))
-                df = _add_derived_columns(df)
-                st.session_state.data_source = f"🌐 Datos reales ({len(raw_df)} ofertas)"
-                st.session_state.last_update = datetime.datetime.now()
-                return df
+    if not force_fresh:  # Si NO se fuerza refresh
+        processed = repo.load_processed()  # Intenta cargar datos procesados del cache
+        if processed is not None and len(processed) >= 20:  # Si hay datos suficientes
+            logger.info("Using cached processed dataset")  # Registra que usa cache
+            df = _add_derived_columns(processed)  # Agrega columnas derivadas
+            st.session_state.data_source = "💾 Datos reales (cache)"  # Marca fuente como cache
+            st.session_state.last_update = datetime.datetime.now()  # Registra timestamp
+            return df  # Retorna DataFrame del cache
+        raw_files = repo.list_raw_files()  # Lista archivos raw CSV
+        if raw_files:  # Si hay archivos raw
+            latest = raw_files[-1]  # Toma el más reciente
+            raw_df = repo.load_raw(latest.name)  # Carga el archivo CSV más reciente
+            if raw_df is not None and len(raw_df) >= 20:  # Si tiene datos suficientes
+                df = cleaner.clean(raw_df.to_dict("records"))  # Limpia datos raw con pipeline ETL
+                df = _add_derived_columns(df)  # Agrega ciudad y role_categoria
+                st.session_state.data_source = f"🌐 Datos reales ({len(raw_df)} ofertas)"  # Marca fuente
+                st.session_state.last_update = datetime.datetime.now()  # Timestamp
+                return df  # Retorna DataFrame limpio
 
-    # SCRAPING: real data from elempleo.com
-    scraper_name = type(scraper).__name__
+    # SCRAPING: real data from elempleo.com  # SCRAPING: datos reales de elempleo.com
+    scraper_name = type(scraper).__name__  # Nombre de la clase del scraper
 
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-    info_box = st.info(f"🌐 Iniciando scraping via {scraper_name}...")
+    progress_bar = st.progress(0)  # Barra de progreso (0% a 100%)
+    status_text = st.empty()  # Texto de estado (vacío inicialmente)
+    info_box = st.info(f"🌐 Iniciando scraping via {scraper_name}...")  # Cuadro de info con nombre del scraper
 
     def update_progress(current, total, query, records, status):
+        """Callback para actualizar barra de progreso y texto durante el scraping."""
         try:
-            if status == "done":
-                progress_bar.progress(1.0)
+            if status == "done":  # Si el scraping terminó
+                progress_bar.progress(1.0)  # Barra al 100%
                 status_text.success(f"✅ Scraping completado: {records} ofertas obtenidas de {len(cfg.SEARCH_QUERIES)} queries")
-                info_box.empty()
-            else:
-                progress = current / total if total > 0 else 0
-                progress_bar.progress(progress)
-                display_query = query[:60] + "..." if len(query) > 60 else query
-                status_text.text(f"📡 [{current}/{total}] {display_query}")
+                info_box.empty()  # Oculta cuadro de info
+            else:  # Si está en progreso
+                progress = current / total if total > 0 else 0  # Calcula porcentaje
+                progress_bar.progress(progress)  # Actualiza barra
+                display_query = query[:60] + "..." if len(query) > 60 else query  # Trunca query larga
+                status_text.text(f"📡 [{current}/{total}] {display_query}")  # Muestra query actual
                 info_box.info(f"🔄 Scrapeando: {display_query}\n\n📊 Ofertas encontradas: {records}\n📈 Queries procesadas: {current}/{total}")
         except Exception:
-            pass
+            pass  # Ignora errores de Streamlit durante actualizaciones rápidas
 
-    raw_data = None
-    error_msg = None
+    raw_data = None  # Datos crudos del scraping
+    error_msg = None  # Mensaje de error si falla
 
     try:
-        raw_data = scraper.fetch_data(cfg.SEARCH_QUERIES, progress_callback=update_progress)
+        raw_data = scraper.fetch_data(cfg.SEARCH_QUERIES, progress_callback=update_progress)  # Ejecuta scraping con callback de progreso
     except Exception as e:
-        error_msg = str(e)
-        logger.error(f"Scraping failed: {e}")
+        error_msg = str(e)  # Guarda mensaje de error
+        logger.error(f"Scraping failed: {e}")  # Registra error
 
     try:
-        progress_bar.empty()
-        status_text.empty()
-        info_box.empty()
+        progress_bar.empty()  # Oculta barra de progreso
+        status_text.empty()  # Oculta texto de estado
+        info_box.empty()  # Oculta cuadro de info
     except Exception:
-        pass
+        pass  # Ignora errores al limpiar UI
 
-    if raw_data:
+    if raw_data:  # Si obtuvo datos del scraping
         try:
-            source_names = []
-            if hasattr(scraper, "get_source_stats"):
-                source_names = scraper.get_source_stats().get("sources", [])
-            source_label = " + ".join(source_names) if source_names else scraper_name
-            st.success(f"✅ Datos obtenidos de {source_label}")
+            source_names = []  # Lista de fuentes
+            if hasattr(scraper, "get_source_stats"):  # Si el scraper tiene stats
+                source_names = scraper.get_source_stats().get("sources", [])  # Obtiene nombres de fuentes
+            source_label = " + ".join(source_names) if source_names else scraper_name  # Label de fuente
+            st.success(f"✅ Datos obtenidos de {source_label}")  # Muestra éxito
             st.info(f"📊 Total: **{len(raw_data)} ofertas** de **{len(cfg.SEARCH_QUERIES)} queries** de búsqueda")
         except Exception:
-            pass
-        repo.save_raw(raw_data)
-        df = cleaner.clean(raw_data)
-        repo.save_processed(df)
-        df = _add_derived_columns(df)
-        st.session_state.data_source = f"🌐 Datos reales ({source_label})"
-        st.session_state.last_update = datetime.datetime.now()
-        st.toast(f"🔥 Datos reales actualizados de {source_label}", icon="🔥")
-        return df
+            pass  # Ignora errores de UI
+        repo.save_raw(raw_data)  # Guarda datos raw en CSV
+        df = cleaner.clean(raw_data)  # Limpia datos con pipeline ETL
+        repo.save_processed(df)  # Guarda datos procesados
+        df = _add_derived_columns(df)  # Agrega columnas derivadas
+        st.session_state.data_source = f"🌐 Datos reales ({source_label})"  # Marca fuente
+        st.session_state.last_update = datetime.datetime.now()  # Timestamp
+        st.toast(f"🔥 Datos reales actualizados de {source_label}", icon="🔥")  # Toast de notificación
+        return df  # Retorna DataFrame limpio
 
-    logger.warning(f"Scraping failed ({error_msg}), trying fallback")
+    logger.warning(f"Scraping failed ({error_msg}), trying fallback")  # Registra warning
     try:
-        st.warning(f"⚠️ {scraper_name} no disponible — usando datos guardados")
+        st.warning(f"⚠️ {scraper_name} no disponible — usando datos guardados")  # Muestra warning al usuario
     except Exception:
         pass
 
-    processed = repo.load_processed()
-    if processed is not None and len(processed) >= 20:
-        logger.info("Fallback to processed cache")
-        df = _add_derived_columns(processed)
-        st.session_state.data_source = "💾 Datos reales (cache)"
-        st.session_state.last_update = datetime.datetime.now()
-        return df
+    processed = repo.load_processed()  # Intenta cargar cache procesado
+    if processed is not None and len(processed) >= 20:  # Si hay datos suficientes
+        logger.info("Fallback to processed cache")  # Registra fallback
+        df = _add_derived_columns(processed)  # Agrega columnas derivadas
+        st.session_state.data_source = "💾 Datos reales (cache)"  # Marca fuente
+        st.session_state.last_update = datetime.datetime.now()  # Timestamp
+        return df  # Retorna DataFrame del cache
 
-    raw_files = repo.list_raw_files()
-    if raw_files:
-        latest = raw_files[-1]
-        raw_df = repo.load_raw(latest.name)
-        if raw_df is not None and len(raw_df) >= 20:
-            logger.info("Fallback to raw cache")
-            df = cleaner.clean(raw_df.to_dict("records"))
-            df = _add_derived_columns(df)
-            st.session_state.data_source = f"🌐 Datos reales ({latest.name})"
-            st.session_state.last_update = datetime.datetime.now()
-            return df
+    raw_files = repo.list_raw_files()  # Lista archivos raw
+    if raw_files:  # Si hay archivos raw
+        latest = raw_files[-1]  # Toma el más reciente
+        raw_df = repo.load_raw(latest.name)  # Carga CSV
+        if raw_df is not None and len(raw_df) >= 20:  # Si tiene datos
+            logger.info("Fallback to raw cache")  # Registra fallback
+            df = cleaner.clean(raw_df.to_dict("records"))  # Limpia datos
+            df = _add_derived_columns(df)  # Agrega columnas derivadas
+            st.session_state.data_source = f"🌐 Datos reales ({latest.name})"  # Marca fuente
+            st.session_state.last_update = datetime.datetime.now()  # Timestamp
+            return df  # Retorna DataFrame
 
     try:
-        st.error("❌ No hay datos disponibles — haz click en 'Actualizar datos'")
+        st.error("❌ No hay datos disponibles — haz click en 'Actualizar datos'")  # Muestra error al usuario
     except Exception:
         pass
-    return pd.DataFrame()
+    return pd.DataFrame()  # Retorna DataFrame vacío si no hay datos
 
 
 def train_or_load_model(cfg, model, df):
-    if model.is_trained:
-        return model
+    """Entrena el modelo ML o carga uno existente desde disco."""
+    if model.is_trained:  # Si el modelo ya está entrenado en memoria
+        return model  # Retorna el modelo sin hacer nada
     try:
-        model.load(str(cfg.MODEL_PATH))
-        if model.is_trained:
-            return model
-    except (FileNotFoundError, ValueError):
-        logger.info("Training new model")
-        required = ["experiencia_requerida", "cargo_nivel_cod", "modalidad_cod", "skills_str",
+        model.load(str(cfg.MODEL_PATH))  # Intenta cargar modelo desde disco (.pkl)
+        if model.is_trained:  # Si se cargó correctamente
+            return model  # Retorna el modelo cargado
+    except (FileNotFoundError, ValueError):  # Si no existe archivo o hash no coincide
+        logger.info("Training new model")  # Registra que va a entrenar
+        required = ["experiencia_requerida", "cargo_nivel_cod", "modalidad_cod", "skills_str",  # Columnas requeridas para entrenar
                      "role_categoria", "num_skills", "tipo_contrato_cod"]
-        missing = [c for c in required if c not in df.columns]
-        if missing:
-            logger.warning(f"Missing columns for training: {missing}")
-            if "cargo_nivel_cod" in missing and "cargo_nivel" in df.columns:
-                level_map = {"tecnico": 0, "tecnologo": 1, "ingeniero": 2, "senior": 3}
-                df["cargo_nivel_cod"] = df["cargo_nivel"].map(level_map).fillna(2).astype(int)
-            if "modalidad_cod" in missing and "modalidad_clean" in df.columns:
-                modal_map = {"presencial": 0, "hibrido": 1, "remoto": 2}
-                df["modalidad_cod"] = df["modalidad_clean"].map(modal_map).fillna(0).astype(int)
-            if "experiencia_requerida" in missing:
-                df["experiencia_requerida"] = 0.0
-            if "skills_str" in missing:
-                df["skills_str"] = ""
-            if "role_categoria" in missing:
-                from src.utils.validators import identify_role_category
-                df["role_categoria"] = df.apply(
+        missing = [c for c in required if c not in df.columns]  # Detecta columnas faltantes
+        if missing:  # Si faltan columnas
+            logger.warning(f"Missing columns for training: {missing}")  # Advertencia
+            if "cargo_nivel_cod" in missing and "cargo_nivel" in df.columns:  # Si falta cargo_nivel_cod pero existe cargo_nivel
+                level_map = {"tecnico": 0, "tecnologo": 1, "ingeniero": 2, "senior": 3}  # Mapa de conversión
+                df["cargo_nivel_cod"] = df["cargo_nivel"].map(level_map).fillna(2).astype(int)  # Convierte a código numérico
+            if "modalidad_cod" in missing and "modalidad_clean" in df.columns:  # Si falta modalidad_cod
+                modal_map = {"presencial": 0, "hibrido": 1, "remoto": 2}  # Mapa de conversión
+                df["modalidad_cod"] = df["modalidad_clean"].map(modal_map).fillna(0).astype(int)  # Convierte a código
+            if "experiencia_requerida" in missing:  # Si falta experiencia
+                df["experiencia_requerida"] = 0.0  # Asigna 0 por defecto
+            if "skills_str" in missing:  # Si falta skills_str
+                df["skills_str"] = ""  # Asigna string vacío
+            if "role_categoria" in missing:  # Si falta role_categoria
+                from src.utils.validators import identify_role_category  # Importa función
+                df["role_categoria"] = df.apply(  # Identifica categoría del rol
                     lambda r: identify_role_category(r.get("titulo", ""), r.get("descripcion", "")), axis=1
                 )
-            if "num_skills" in missing:
-                df["num_skills"] = df["skills_str"].apply(lambda x: len(x.split(",")) if x else 0)
-            if "tipo_contrato_cod" in missing:
-                contrato_map = {"indefinido": 0, "prestación de servicios": 1}
-                contrato_col = df["tipo_contrato"] if "tipo_contrato" in df.columns else pd.Series("", index=df.index)
-                df["tipo_contrato_cod"] = contrato_col.fillna("").str.lower().map(contrato_map).fillna(1).astype(int)
-        feature_cols = ["experiencia_requerida", "cargo_nivel_cod", "modalidad_cod", "skills_str",
+            if "num_skills" in missing:  # Si falta num_skills
+                df["num_skills"] = df["skills_str"].apply(lambda x: len(x.split(",")) if x else 0)  # Cuenta skills
+            if "tipo_contrato_cod" in missing:  # Si falta tipo_contrato_cod
+                contrato_map = {"indefinido": 0, "prestación de servicios": 1}  # Mapa de conversión
+                contrato_col = df["tipo_contrato"] if "tipo_contrato" in df.columns else pd.Series("", index=df.index)  # Obtiene columna
+                df["tipo_contrato_cod"] = contrato_col.fillna("").str.lower().map(contrato_map).fillna(1).astype(int)  # Convierte a código
+        feature_cols = ["experiencia_requerida", "cargo_nivel_cod", "modalidad_cod", "skills_str",  # Columnas de features
                         "role_categoria", "num_skills", "tipo_contrato_cod"]
-        X = df[feature_cols].copy()
-        y = df["salario_promedio"]
-        model.train(X, y)
-        model.save(str(cfg.MODEL_PATH))
-    return model
+        X = df[feature_cols].copy()  # Features de entrada
+        y = df["salario_promedio"]  # Target: salario promedio
+        model.train(X, y)  # Entrena el modelo
+        model.save(str(cfg.MODEL_PATH))  # Guarda modelo en disco
+    return model  # Retorna modelo entrenado
 
 
 def session_state_init():
-    if "inputs_reset" not in st.session_state:
+    """Inicializa variables de session_state de Streamlit con valores por defecto."""
+    if "inputs_reset" not in st.session_state:  # Flag de reset de inputs
         st.session_state.inputs_reset = False
-    if "prediction_made" not in st.session_state:
+    if "prediction_made" not in st.session_state:  # Flag de predicción realizada
         st.session_state.prediction_made = False
-    if "use_cache" not in st.session_state:
+    if "use_cache" not in st.session_state:  # Flag de uso de cache
         st.session_state.use_cache = False
-    if "force_refresh" not in st.session_state:
+    if "force_refresh" not in st.session_state:  # Flag de refresh forzado
         st.session_state.force_refresh = False
-    if "data_source" not in st.session_state:
+    if "data_source" not in st.session_state:  # Fuente de datos actual
         st.session_state.data_source = "—"
-    if "last_update" not in st.session_state:
+    if "last_update" not in st.session_state:  # Timestamp de última actualización
         st.session_state.last_update = None
-    if "ciudades_filter" not in st.session_state:
+    if "ciudades_filter" not in st.session_state:  # Filtro de ciudades activo
         st.session_state.ciudades_filter = []
-    if "agent_report" not in st.session_state:
+    if "agent_report" not in st.session_state:  # Informe del agente generado
         st.session_state.agent_report = ""
-    if "audit_results" not in st.session_state:
+    if "audit_results" not in st.session_state:  # Resultados de auditoría de APIs
         st.session_state.audit_results = []
 
 
 def render_source_badge():
-    c = DARK_COLORS
-    src = st.session_state.get("data_source", "—")
-    colors = {"💾": ("#6366f1", "#eef2ff"), "🌐": ("#10b981", "#d1fae5"), "📡": ("#f59e0b", "#fef3c7")}
-    bg = "#152031"
-    fg = c["on_surface_variant"]
-    for prefix, (ic, _) in colors.items():
-        if src.startswith(prefix):
-            fg = ic
+    """Renderiza el badge de fuente de datos en la UI (cache, scraping, etc.)."""
+    c = DARK_COLORS  # Colores del tema
+    src = st.session_state.get("data_source", "—")  # Obtiene fuente de datos actual
+    colors = {"💾": ("#6366f1", "#eef2ff"), "🌐": ("#10b981", "#d1fae5"), "📡": ("#f59e0b", "#fef3c7")}  # Colores por emoji
+    bg = "#152031"  # Color de fondo del badge
+    fg = c["on_surface_variant"]  # Color de texto por defecto
+    for prefix, (ic, _) in colors.items():  # Busca color por prefijo del emoji
+        if src.startswith(prefix):  # Si la fuente empieza con ese emoji
+            fg = ic  # Usa el color del emoji
             break
-    last_up = st.session_state.get("last_update")
-    time_str = last_up.strftime("%H:%M:%S") if last_up else "—"
-    st.markdown(
+    last_up = st.session_state.get("last_update")  # Última actualización
+    time_str = last_up.strftime("%H:%M:%S") if last_up else "—"  # Formatea hora
+    st.markdown(  # Renderiza badge HTML
         f"<span class='source-badge' style='color:{fg};border:1px solid {fg}40;'>"
         f"{src} · {time_str}</span>",
         unsafe_allow_html=True,
@@ -480,114 +488,116 @@ def render_source_badge():
 
 
 def main():
-    session_state_init()
-    render_theme_css()
+    """Función principal de la aplicación Streamlit."""
+    session_state_init()  # Inicializa variables de sesión
+    render_theme_css()  # Inyecta CSS del tema azul oscuro
 
-    c = DARK_COLORS
-    accent = "#4A90E2"
+    c = DARK_COLORS  # Colores del tema
+    accent = "#4A90E2"  # Color de acento azul
 
-    cfg, scraper, cleaner, repo, model = init_components()
+    cfg, scraper, cleaner, repo, model = init_components()  # Inicializa componentes (cacheados)
 
-    st.markdown(f"""
+    st.markdown(f"""  # Inyecta orbes decorativos animados de fondo
     <div class="orb" style="width:400px;height:400px;background:{accent}08;top:-100px;left:-100px;animation-delay:0s;"></div>
     <div class="orb" style="width:300px;height:300px;background:{accent}05;bottom:-50px;right:-50px;animation-delay:3s;"></div>
     """, unsafe_allow_html=True)
 
-    with st.sidebar:
-        st.markdown(
+    with st.sidebar:  # Bloque del sidebar (panel lateral izquierdo)
+        st.markdown(  # Logo y nombre de la app
             f"<div style='display:flex;align-items:center;gap:12px;margin-bottom:4px;'>"
             f"<div style='width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,{accent},{c['primary_container']});"
-            f"display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;'>💰</div>"
+            f"display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;'>💰</div>"  # Icono de dinero
             f"<div><h2 style='font-family:Plus Jakarta Sans;font-weight:800;margin:0;font-size:1.2rem;"
             f"background:linear-gradient(135deg,{accent},{c['primary_container']});"
-            f"-webkit-background-clip:text;-webkit-text-fill-color:transparent;'>PredicSalario IA</h2>"
+            f"-webkit-background-clip:text;-webkit-text-fill-color:transparent;'>PredicSalario IA</h2>"  # Nombre con gradiente
             f"<p style='font-size:0.7rem;color:{c["on_surface_variant"]};margin:0;text-transform:uppercase;letter-spacing:0.1em;'>Medellín, Colombia</p></div></div>",
             unsafe_allow_html=True,
         )
-        st.markdown(
+        st.markdown(  # Subtítulo de la app
             f"<p style='color:{c["on_surface_variant"]};font-size:0.8rem;margin-bottom:1rem;'>"
             "Análisis del mercado laboral TI</p>",
             unsafe_allow_html=True,
         )
 
-        st.markdown(f"<p style='font-size:0.8rem;color:{c["on_surface_variant"]};margin:0;'>🌙 Modo Activo</p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='font-size:0.8rem;color:{c["on_surface_variant"]};margin:0;'>🌙 Modo Activo</p>", unsafe_allow_html=True)  # Indicador de modo
 
-        st.divider()
+        st.divider()  # Línea divisora
 
-        page = st.radio(
-            "Navegacion",
+        page = st.radio(  # Menú de navegación principal
+            "Navegacion",  # Label del radio button
             ["🏠 Inicio", "📊 Analisis del Mercado", "📈 Informe Ejecutivo", "🎯 Predice tu Salario", "📋 Datos Crudos", "📋 Agente de Pertinencia", "ℹ️ Info del Sistema", "⚙️ Configuracion"],
         )
 
-        st.divider()
-        cache_on = st.toggle(
-            "💾 Usar datos en caché",
-            value=st.session_state.get("use_cache", True),
-            key="cache_toggle",
-            help="Usa datos guardados localmente. Desactiva para forzar descarga fresca desde elempleo.com con Playwright.",
+        st.divider()  # Línea divisora
+        cache_on = st.toggle(  # Toggle para activar/desactivar cache
+            "💾 Usar datos en caché",  # Label del toggle
+            value=st.session_state.get("use_cache", True),  # Valor por defecto: True
+            key="cache_toggle",  # Key única en session_state
+            help="Usa datos guardados localmente. Desactiva para forzar descarga fresca desde elempleo.com con Playwright.",  # Tooltip de ayuda
         )
-        if cache_on != st.session_state.get("use_cache"):
-            st.session_state.use_cache = cache_on
-            st.rerun()
-        st.divider()
+        if cache_on != st.session_state.get("use_cache"):  # Si el toggle cambió
+            st.session_state.use_cache = cache_on  # Actualiza el flag
+            st.rerun()  # Recarga la app
+        st.divider()  # Línea divisora
 
-        st.markdown(f"<p style='font-size:0.8rem;color:{c['on_surface_variant']};margin-bottom:4px;'>📍 Municipio</p>", unsafe_allow_html=True)
-        ciudades_selected = list(st.session_state.get("ciudades_filter", []))
-        expanded_ciudades = []
-        for region, cities in MEDELLIN_METRO.items():
-            with st.expander(f"{region}", expanded=(region == "Centro")):
-                for city in cities:
-                    if st.checkbox(city, value=(city in ciudades_selected), key=f"city_{city}"):
-                        if city not in expanded_ciudades:
-                            expanded_ciudades.append(city)
-                    else:
-                        if city in expanded_ciudades:
-                            expanded_ciudades.remove(city)
-        if expanded_ciudades != ciudades_selected:
-            st.session_state.ciudades_filter = expanded_ciudades
-            st.rerun()
+        st.markdown(f"<p style='font-size:0.8rem;color:{c['on_surface_variant']};margin-bottom:4px;'>📍 Municipio</p>", unsafe_allow_html=True)  # Label de filtro
+        ciudades_selected = list(st.session_state.get("ciudades_filter", []))  # Ciudades seleccionadas actualmente
+        expanded_ciudades = []  # Lista temporal de ciudades seleccionadas
+        for region, cities in MEDELLIN_METRO.items():  # Itera cada región del AMVA
+            with st.expander(f"{region}", expanded=(region == "Centro")):  # Expander por región (Centro expandido por defecto)
+                for city in cities:  # Itera cada ciudad de la región
+                    if st.checkbox(city, value=(city in ciudades_selected), key=f"city_{city}"):  # Checkbox de ciudad
+                        if city not in expanded_ciudades:  # Si se marcó
+                            expanded_ciudades.append(city)  # Agrega a la lista
+                    else:  # Si se desmarcó
+                        if city in expanded_ciudades:  # Si estaba en la lista
+                            expanded_ciudades.remove(city)  # La quita
+        if expanded_ciudades != ciudades_selected:  # Si cambió la selección
+            st.session_state.ciudades_filter = expanded_ciudades  # Actualiza filtro
+            st.rerun()  # Recarga la app
 
-        st.divider()
-        render_source_badge()
-        st.markdown(f"<p class='info-text' style='margin-top:4px;'>🔒 Sin almacenamiento de datos personales</p>", unsafe_allow_html=True)
+        st.divider()  # Línea divisora
+        render_source_badge()  # Muestra badge de fuente de datos
+        st.markdown(f"<p class='info-text' style='margin-top:4px;'>🔒 Sin almacenamiento de datos personales</p>", unsafe_allow_html=True)  # Nota de privacidad
 
-    if page == "🏠 Inicio":
+    if page == "🏠 Inicio":  # Página de inicio (landing)
         render_landing(c, accent, cfg)
-    elif page == "📊 Analisis del Mercado":
+    elif page == "📊 Analisis del Mercado":  # Página de análisis de mercado
         render_market_analysis(cfg, scraper, cleaner, repo, model)
-    elif page == "📈 Informe Ejecutivo":
+    elif page == "📈 Informe Ejecutivo":  # Página de informe ejecutivo
         render_executive_report(cfg, scraper, cleaner, repo, model)
-    elif page == "🎯 Predice tu Salario":
+    elif page == "🎯 Predice tu Salario":  # Página de predicción salarial
         render_prediction(cfg, scraper, cleaner, repo, model)
-    elif page == "📋 Datos Crudos":
+    elif page == "📋 Datos Crudos":  # Página de datos crudos
         render_raw_data(cfg, scraper, cleaner, repo)
 
-    elif page == "📋 Agente de Pertinencia":
+    elif page == "📋 Agente de Pertinencia":  # Página del agente de pertinencia (wizard)
         render_agent_panel()
 
-    elif page == "ℹ️ Info del Sistema":
+    elif page == "ℹ️ Info del Sistema":  # Página de información del sistema
         render_system_info(c, accent, cfg)
-    elif page == "⚙️ Configuracion":
+    elif page == "⚙️ Configuracion":  # Página de configuración
         render_settings(cfg)
 
-    # Footer
-    st.markdown("---")
-    st.markdown(
+    # Footer  # Pie de página
+    st.markdown("---")  # Línea divisora
+    st.markdown(  # Texto de copyright
         f"<p style='text-align:center;color:{c['on_surface_variant']};opacity:0.4;font-size:0.75rem;margin:1rem 0 0.5rem;'>"
-        f"© 2025 PredicSalario IA — Todos los derechos reservados | "
-        f"Creado por <strong>Lilliana Uribe González</strong> | Junio 2025 | "
+        f"© 2025 PredicSalario IA — Todos los derechos reservados | "  # Copyright
+        f"Creado por <strong>Lilliana Uribe González</strong> | Junio 2025 | "  # Autor
         f"Medellín, Colombia</p>",
         unsafe_allow_html=True,
     )
 
 
 def render_landing(c, accent, cfg):
-    from src.data.population import get_population_data, get_population_table_html
-    from src.utils.news import fetch_news
+    """Renderiza la página de inicio (landing page) con información general del sistema."""
+    from src.data.population import get_population_data, get_population_table_html  # Datos de población del AMVA
+    from src.utils.news import fetch_news  # Noticias de empleo TI
 
-    @st.cache_data(ttl=3600)  # 1 hour
+    @st.cache_data(ttl=3600)  # Cachea por 1 hora (3600 segundos)
     def _fetch_news_cached(max_items):
-        return fetch_news(max_items)
+        return fetch_news(max_items)  # Obtiene noticias y cachea
 
     shield_logo = """
     <svg width="100%" viewBox="0 0 680 620" role="img" xmlns="http://www.w3.org/2000/svg">
