@@ -13,6 +13,7 @@ Sistema de prediccion salarial y analisis de empleabilidad para tecnicos, tecnol
 
 ## 📋 Tabla de Contenidos
 
+- [Video Presentacion](#-video-presentacion)
 - [Sistema Desplegado](#-sistema-desplegado)
 - [Descripcion](#-descripcion)
 - [Arquitectura del Software](#-arquitectura-del-software)
@@ -29,6 +30,16 @@ Sistema de prediccion salarial y analisis de empleabilidad para tecnicos, tecnol
 - [ISO/IEC 25010](#isoiec-25010)
 - [Pruebas](#pruebas)
 - [Licencia](#licencia)
+
+---
+
+## 🎬 Video Presentacion
+
+En la carpeta `video_presentacion/` se encuentra el video de presentacion del proyecto:
+
+**Archivo:** `video_presentacion/presentacion.mp4`
+
+Puedes verlo directamente en GitHub/GitLab navegando a la carpeta `video_presentacion` y haciendo clic en el archivo `presentacion.mp4`, o descargandolo para verlo localmente.
 
 ---
 
