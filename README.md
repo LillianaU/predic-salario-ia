@@ -7,7 +7,7 @@ Sistema de prediccion salarial y analisis de empleabilidad para tecnicos, tecnol
 
 **📦 Repositorios:**
 - **GitHub:** https://github.com/LillianaU/predic-salario-ia
-- **GitLab:** https://gitlab.com/lillyuribegon/predic-salario-ia
+- **GitLab:** 
 
 ---
 
